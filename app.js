@@ -7,6 +7,7 @@ async function translateLangbly(text, targetLang, sourceLang = "es") {
   const API_KEY = "UHmbUQivVPBQcdmED62Ma1"; // ضع هنا الـ Key تبعك
   const BASE_URL = "https://api.langbly.com/language/translate/v2";
 
+
   try {
     const response = await fetch(BASE_URL, {
       method: "POST",
@@ -55,23 +56,24 @@ async function searchWord() {
 // ==================
 async function saveWordOnline() {
   if (!currentWordData) return;
-
   const url = "https://script.google.com/macros/s/AKfycbwDkGYlnIOGbNNnf8_vu2GOCtyDZHfWVyGoMMUm6rUY7R0U06AW4JOG8fD6amdu209hig/exec";
 
   try {
-    await fetch(url, {
+    const res = await fetch(url, {
       method: "POST",
+      headers: {"Content-Type":"application/json"},
       body: JSON.stringify({
         word: currentWordData.word,
         meaning: currentWordData.meaning,
         language: document.getElementById("languageSelect").value
-      }),
-      headers: { "Content-Type": "application/json" }
+      })
     });
 
-    fetchSavedWords(); // إعادة جلب القائمة بعد الإضافة
-  } catch (error) {
-    console.error("Error saving word online:", error);
+    const data = await res.json();
+    console.log("Word saved:", data);
+    fetchSavedWords(); // تحديث القائمة
+  } catch (err) {
+    console.error("Error saving word online:", err);
   }
 }
 
@@ -80,7 +82,6 @@ async function saveWordOnline() {
 // ==================
 async function fetchSavedWords() {
   const url = "https://script.google.com/macros/s/AKfycbwDkGYlnIOGbNNnf8_vu2GOCtyDZHfWVyGoMMUm6rUY7R0U06AW4JOG8fD6amdu209hig/exec";
-
   try {
     const res = await fetch(url);
     const data = await res.json();
@@ -105,7 +106,6 @@ function displayOnlineWords(words) {
     deleteBtn.innerText = "❌";
     deleteBtn.style.marginLeft = "10px";
     deleteBtn.onclick = () => {
-      // حذف على Google Sheets يحتاج backend أو تعديل الـ Apps Script لاحقاً
       alert("حذف كلمة أونلاين يحتاج تعديل Apps Script");
     };
 
@@ -120,6 +120,7 @@ function displayOnlineWords(words) {
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("searchBtn").addEventListener("click", searchWord);
   document.getElementById("saveBtn").addEventListener("click", saveWordOnline);
-  document.getElementById("refreshBtn")?.addEventListener("click", fetchSavedWords);
+  document.getElementById("refreshBtn").addEventListener("click", fetchSavedWords);
+
   fetchSavedWords(); // جلب الكلمات عند فتح الصفحة
 });
