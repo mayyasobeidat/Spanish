@@ -1,8 +1,10 @@
 let currentWordData = null;
 
-// ترجمة الكلمة عبر Langbly
+// ==================
+// 1️⃣ ترجمة الكلمة عبر Langbly
+// ==================
 async function translateLangbly(text, targetLang, sourceLang = "es") {
-  const API_KEY = "YOUR_API_KEY_HERE"; // حط هنا الـ Key تبعك
+  const API_KEY = "UHmbUQivVPBQcdmED62Ma1"; // ضع هنا الـ Key تبعك
   const BASE_URL = "https://api.langbly.com/language/translate/v2";
 
   try {
@@ -10,7 +12,7 @@ async function translateLangbly(text, targetLang, sourceLang = "es") {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer UHmbUQivVPBQcdmED62Ma1`
+        "Authorization": `Bearer ${API_KEY}`
       },
       body: JSON.stringify({
         q: text,
@@ -28,10 +30,13 @@ async function translateLangbly(text, targetLang, sourceLang = "es") {
   }
 }
 
-// البحث عن الكلمة
+// ==================
+// 2️⃣ البحث عن كلمة
+// ==================
 async function searchWord() {
-  const word = document.getElementById("wordInput").value;
+  const word = document.getElementById("wordInput").value.trim();
   const lang = document.getElementById("languageSelect").value;
+
   if (!word) return;
 
   const translated = await translateLangbly(word, lang);
@@ -45,24 +50,54 @@ async function searchWord() {
     `${currentWordData.word} = ${currentWordData.meaning}`;
 }
 
-// حفظ الكلمة
-function saveWord() {
+// ==================
+// 3️⃣ حفظ الكلمة أونلاين (Google Sheets)
+// ==================
+async function saveWordOnline() {
   if (!currentWordData) return;
 
-  let saved = JSON.parse(localStorage.getItem("words")) || [];
-  saved.push(currentWordData);
-  localStorage.setItem("words", JSON.stringify(saved));
+  const url = "https://script.google.com/macros/s/AKfycbwDkGYlnIOGbNNnf8_vu2GOCtyDZHfWVyGoMMUm6rUY7R0U06AW4JOG8fD6amdu209hig/exec";
 
-  displaySavedWords();
+  try {
+    await fetch(url, {
+      method: "POST",
+      body: JSON.stringify({
+        word: currentWordData.word,
+        meaning: currentWordData.meaning,
+        language: document.getElementById("languageSelect").value
+      }),
+      headers: { "Content-Type": "application/json" }
+    });
+
+    fetchSavedWords(); // إعادة جلب القائمة بعد الإضافة
+  } catch (error) {
+    console.error("Error saving word online:", error);
+  }
 }
 
-// عرض الكلمات المحفوظة
-function displaySavedWords() {
-  let saved = JSON.parse(localStorage.getItem("words")) || [];
+// ==================
+// 4️⃣ جلب الكلمات من Google Sheets
+// ==================
+async function fetchSavedWords() {
+  const url = "https://script.google.com/macros/s/AKfycbwDkGYlnIOGbNNnf8_vu2GOCtyDZHfWVyGoMMUm6rUY7R0U06AW4JOG8fD6amdu209hig/exec";
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+    displayOnlineWords(data);
+  } catch (error) {
+    console.error("Error fetching words:", error);
+  }
+}
+
+// ==================
+// 5️⃣ عرض الكلمات أونلاين
+// ==================
+function displayOnlineWords(words) {
   const list = document.getElementById("savedList");
   list.innerHTML = "";
 
-  saved.forEach((w, index) => {
+  words.forEach((w, index) => {
     const li = document.createElement("li");
     li.innerText = `${w.word} = ${w.meaning}`;
 
@@ -70,9 +105,8 @@ function displaySavedWords() {
     deleteBtn.innerText = "❌";
     deleteBtn.style.marginLeft = "10px";
     deleteBtn.onclick = () => {
-      saved.splice(index, 1);
-      localStorage.setItem("words", JSON.stringify(saved));
-      displaySavedWords();
+      // حذف على Google Sheets يحتاج backend أو تعديل الـ Apps Script لاحقاً
+      alert("حذف كلمة أونلاين يحتاج تعديل Apps Script");
     };
 
     li.appendChild(deleteBtn);
@@ -80,32 +114,12 @@ function displaySavedWords() {
   });
 }
 
-// ربط الأزرار بعد تحميل الصفحة
+// ==================
+// 6️⃣ ربط الأزرار عند تحميل الصفحة
+// ==================
 window.addEventListener("DOMContentLoaded", () => {
   document.getElementById("searchBtn").addEventListener("click", searchWord);
-  document.getElementById("saveBtn").addEventListener("click", saveWord);
-  displaySavedWords();
+  document.getElementById("saveBtn").addEventListener("click", saveWordOnline);
+  document.getElementById("refreshBtn")?.addEventListener("click", fetchSavedWords);
+  fetchSavedWords(); // جلب الكلمات عند فتح الصفحة
 });
-
-function doGet(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
-  const data = sheet.getDataRange().getValues();
-  const result = data.slice(1).map(row => ({
-    word: row[0],
-    meaning: row[1],
-    language: row[2],
-    date: row[3]
-  }));
-  return ContentService.createTextOutput(JSON.stringify(result))
-                       .setMimeType(ContentService.MimeType.JSON);
-}
-
-function doPost(e) {
-  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Sheet1");
-  const params = JSON.parse(e.postData.contents);
-
-  sheet.appendRow([params.word, params.meaning, params.language, new Date()]);
-
-  return ContentService.createTextOutput(JSON.stringify({status: "success"}))
-                       .setMimeType(ContentService.MimeType.JSON);
-}
