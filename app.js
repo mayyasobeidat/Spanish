@@ -1,7 +1,7 @@
 
 
 let currentWordData = null;
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzbqVEZzR6FqbU2rDN8M5ZVTvJrvT7P_1lMZh7dWhzn4Q-SpjhZ9tn5mHr2zlSNhFi97A/exec"; 
+const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyXJi5WQyhhBbByA813EcJFg_RFN8qI_D7rCzAI_Z6EAIwNZ6JqTwal3p7xu-26QOL15Q/exec"; 
 
 async function translateLangbly(text, targetLang, sourceLang = "es") {
   const API_KEY = "UHmbUQivVPBQcdmED62Ma1"; 
