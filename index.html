@@ -1,32 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Spanish Vocabulary</title>
-  <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    input, select, button { margin: 5px; padding: 5px; }
-    #result { margin-top: 10px; font-weight: bold; }
-    ul { margin-top: 10px; }
-  </style>
-</head>
-<body>
+<input type="text" id="wordInput" placeholder="Enter Spanish word">
+<select id="languageSelect">
+  <option value="ar" selected>Arabic 🇸🇦</option>
+  <option value="en">English 🇬🇧</option>
+</select>
+<button id="searchBtn">Search</button>
 
-  <h1>Learn Spanish 🇪🇸</h1>
+<div id="result"></div>
+<button id="saveBtn">Save Word</button>
+<button id="refreshBtn">Refresh List</button>
 
-  <input type="text" id="wordInput" placeholder="Enter Spanish word">
-  <select id="languageSelect">
-    <option value="ar" selected>Arabic 🇸🇦</option>
-    <option value="en">English 🇬🇧</option>
-  </select>
-  <button id="searchBtn">Search</button>
+<h2>Saved Words</h2>
+<ul id="savedList"></ul>
 
-  <div id="result"></div>
-  <button id="saveBtn">Save Word</button>
-
-  <h2>Saved Words</h2>
-  <ul id="savedList"></ul>
-
-  <script src="app.js" defer></script>
-</body>
-</html>
+<script src="app.js" defer></script>
