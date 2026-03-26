@@ -1,90 +1,714 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>Spanish Words - List</title>
+  <base target="_top">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <style>
+    :root { 
+      --primary: #2ecc71; --bg: #f4f7f6; --text: #2c3e50; --card-bg: white; --border: #eee; 
+    }
+    body.dark { 
+      --bg: #1a1a2e; --text: #e0e0e0; --card-bg: #16213e; --border: #1a1a2e; 
+    }
+   body {
+    font-family: 'Segoe UI', Tahoma, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    margin: 0;
+    transition: 0.3s;
+    
+    /* الحل السحري للتوسيط ومنع الفراغ الأبيض */
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* يضمن أن الطول دائماً بقدر شاشة الموبايل */
+    align-items: center; /* توسيط أفقي */
+    justify-content: flex-start; /* يبدأ من الأعلى مع مساحة padding */
+    padding-top: 80px; 
+    box-sizing: border-box;
+}
+    .container {
+    width: 95%; /* ليأخذ مساحة أكبر قليلاً على الشاشات الصغيرة */
+    max-width: 850px; /* لا يتجاوز هذا الحجم على اللابتوب */
+    margin: 0 auto 20px auto; /* التوسيط وضمان وجود مسافة تحت */
+    background: var(--card-bg);
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    
+    /* لضمان عدم خروج المحتوى */
+    box-sizing: border-box; 
+}
+    /* شريط المستخدم - إصلاح الدارك مود */
+    #userStatus {
+        display: none; position: fixed; top: 0; left: 0; width: 100%; 
+        justify-content: space-between; align-items: center; padding: 10px 20px; 
+        background: var(--card-bg); color: var(--text); /* هنا الحل */
+        border-bottom: 1px solid var(--border); z-index: 1001; box-sizing: border-box;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+
+    .header-left { display: flex; align-items: center; gap: 12px; }
+
+    /* الإحصائيات */
+    .stats-bar { display: flex; gap: 15px; margin-bottom: 20px; }
+    .stat-card { flex: 1; background: rgba(52, 152, 219, 0.1); padding: 15px; border-radius: 12px; text-align: center; border: 1px solid var(--border); }
+    .stat-card h3 { margin: 0; color: #2980b9; font-size: 24px; }
+    body.dark .stat-card h3 { color: #4db8ff; }
+
+    /* حل مشكلة الطول - حاوية الجدول */
+    .table-wrapper {
+        max-height: 600px; /* الارتفاع الذي تراه مناسباً */
+        overflow-y: auto;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+
+    table { width: 100%; border-collapse: collapse; background: var(--card-bg); }
+    
+    /* تثبيت الهيدر داخل السكرول */
+    thead th { 
+        position: sticky; top: 0; background: var(--card-bg); 
+        padding: 12px; border-bottom: 2px solid var(--border); 
+        color: #7f8c8d; z-index: 2;
+    }
+
+    td { padding: 15px; border-bottom: 1px solid var(--border); text-align: right; }
+    .sp-word { font-weight: bold; color: #2980b9; font-size: 17px; }
+    body.dark .sp-word { color: #4db8ff; }
+
+    .search-box { width: 100%; padding: 12px; margin-bottom: 10px; border: 2px solid var(--border); border-radius: 10px; background: var(--card-bg); color: var(--text); box-sizing: border-box; }
+
+    .btn-quiz { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 12px; cursor: pointer; width: 100%; font-size: 18px; font-weight: bold; margin-bottom: 20px; }
+
+    /* النوافذ العائمة */
+    .quiz-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index:9999; justify-content: center; align-items: center; backdrop-filter: blur(4px); }
+    .quiz-card, .login-card { background: var(--card-bg); padding: 35px; border-radius: 20px; width: 90%; max-width: 400px; text-align: center; color: var(--text); }
+    
+    .theme-switch { background: #34495e; color: white; border: none; width: 35px; height: 35px; border-radius: 50%; cursor: pointer; }
+    .btn-logout-small { background: #e74c3c; color: white; border: none; padding: 6px 12px; border-radius: 8px; cursor: pointer; font-weight: bold; }
+
+    .btn-page {
+    background: var(--card-bg);
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: 0.3s;
+}
+
+    /* Login & Logout Overlays - CRITICAL FIX */
+    #loginOverlay, .quiz-overlay { 
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+      background: rgba(44, 62, 80, 0.95); z-index: 10000; 
+      display: none; justify-content: center; align-items: center; 
+      backdrop-filter: blur(5px); 
+    }
+
+    .login-card, .quiz-card { 
+      background: white; padding: 40px 30px; border-radius: 20px; 
+      text-align: center; width: 90%; max-width: 380px; 
+      box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+    }
+
+    .login-input { 
+      width: 100%; padding: 15px; margin: 20px 0; border: 2px solid #eee; 
+      border-radius: 12px; font-size: 18px; text-align: center; box-sizing: border-box; 
+    }
+
+    .btn-login {
+      background: #3498db; color: white; border: none; padding: 15px; 
+      border-radius: 12px; width: 100%; font-size: 18px; cursor: pointer; font-weight: bold;
+    }
+
+    #hintBox { background: rgba(74, 144, 226, 0.1); padding: 10px; border-radius: 8px; margin-bottom: 15px; display: none; }
+
+    /* نافذة الاختبار */
+    .quiz-overlay { display: none; position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); z-index:9999; justify-content: center; align-items: center; }
+    .quiz-card { background: white; padding: 40px; border-radius: 20px; width: 90%; max-width: 450px; text-align: center; position: relative; }
+    .quiz-input { width: 100%; padding: 15px; margin: 20px 0; border: 2px solid #ddd; border-radius: 12px; font-size: 24px; text-align: center; box-sizing: border-box; }
+    .btn-check { background: var(--primary); color: white; border: none; padding: 15px; border-radius: 10px; width: 100%; font-size: 18px; cursor: pointer; font-weight: bold; }
+
+    /* تصميم الإشعار الأنيق */
+#toast {
+  visibility: hidden;
+  min-width: 250px;
+  background-color: #333;
+  color: #fff;
+  text-align: center;
+  border-radius: 10px;
+  padding: 16px;
+  position: fixed;
+  z-index: 10000;
+  left: 50%;
+  bottom: 30px;
+  transform: translateX(-50%);
+  font-size: 16px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+#toast.show {
+  visibility: visible;
+  animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+@keyframes fadein { from {bottom: 0; opacity: 0;} to {bottom: 30px; opacity: 1;} }
+@keyframes fadeout { from {bottom: 30px; opacity: 1;} to {bottom: 0; opacity: 0;} }
+.btn-page:disabled {
+    border-color: #ccc;
+    color: #ccc;
+    cursor: not-allowed;
+}
+
+.btn-page:hover:not(:disabled) {
+    background: var(--primary);
+    color: white;
+}
+#toast {
+    visibility: hidden;
+    min-width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: center;
+    border-radius: 12px;
+    padding: 16px;
+    position: fixed;
+    z-index: 10001; /* فوق كل شيء */
+    left: 50%;
+    bottom: 30px;
+    transform: translateX(-50%);
+    font-size: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    transition: 0.5s ease;
+    border: 1px solid #444;
+}
+
+#toast.show {
+    visibility: visible;
+    animation: fadein 0.5s, fadeout 0.5s 2.5s;
+}
+
+body.dark #toast {
+    background-color: #16213e;
+    border-color: #4db8ff;
+    color: #4db8ff;
+}
+
+@keyframes fadein {
+    from {bottom: 0; opacity: 0;}
+    to {bottom: 30px; opacity: 1;}
+}
+
+@keyframes fadeout {
+    from {bottom: 30px; opacity: 1;}
+    to {bottom: 0; opacity: 0;}
+}
+/* تعديلات الموبايل (للشاشات الأصغر من 600 بكسل) */
+@media (max-width: 600px) {
+    body {
+        padding-top: 70px;
+        /* التأكد من أن الخلفية ثابتة وتغطي كامل المساحة */
+        background-attachment: fixed; 
+    }
+    
+    .container {
+        width: 92%; /* ترك هامش بسيط جداً يميناً ويساراً */
+        margin-top: 10px;
+        margin-bottom: 20px;
+    }
 
 
-let currentWordData = null;
-const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyXJi5WQyhhBbByA813EcJFg_RFN8qI_D7rCzAI_Z6EAIwNZ6JqTwal3p7xu-26QOL15Q/exec"; 
+    /* تحويل الإحصائيات لصفوف أصغر */
+    .stats-bar { 
+        gap: 8px; 
+    }
+    .stat-card { padding: 10px; }
+    .stat-card h3 { font-size: 18px; }
+    .stat-card p { font-size: 12px; }
 
-async function translateLangbly(text, targetLang, sourceLang = "es") {
-  const API_KEY = "UHmbUQivVPBQcdmED62Ma1"; 
-  const BASE_URL = "https://api.langbly.com/language/translate/v2";
+    /* تحسين الجدول للموبايل: إخفاء الأعمدة غير الضرورية إذا لزم الأمر */
+    td, th { padding: 10px 5px; font-size: 14px; }
+    .sp-word { font-size: 15px; }
 
-  try {
-    const response = await fetch(BASE_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${API_KEY}`
-      },
-      body: JSON.stringify({
-        q: text,
-        source: sourceLang,
-        target: targetLang,
-        format: "text"
-      })
+    /* تكبير الأزرار لتناسب اللمس بالإصبع */
+    .btn-quiz, .btn-page, .btn-check {
+        padding: 15px;
+        font-size: 16px;
+    }
+
+    /* تعديل واجهة الكويز لتملأ الشاشة */
+    .quiz-card {
+        width: 95%;
+        padding: 20px;
+        max-width: none;
+    }
+    #quizArWord { font-size: 28px; }
+    
+    /* منع تكبير الشاشة التلقائي عند الكتابة في الآيفون */
+    input[type="text"] { font-size: 16px !important; }
+}
+.table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* يسمح بالتمرير يميناً ويساراً في الجداول العريضة */
+    -webkit-overflow-scrolling: touch;
+}
+  </style>
+</head>
+<body>
+
+<div id="userStatus">
+  <div style="display: flex; align-items: center; gap: 8px;">
+    <span>👤</span>
+    <b id="currentDisplayName"></b>
+  </div>
+  <div class="header-left">
+    <button class="theme-switch" onclick="toggleTheme()" id="themeBtn">🌙</button>
+    <button onclick="logout()" class="btn-logout-small">خروج</button>
+  </div>
+</div>
+
+<div id="loginOverlay">
+  <div class="login-card">
+    <div style="font-size: 50px; margin-bottom: 10px;">📚</div>
+    <h3>مرحباً بك في قاموسك</h3>
+    <p style="color: #7f8c8d;">أدخل اسمك للبدء:</p>
+    <input type="text" id="userNameInput" class="login-input" placeholder="مثال: Mayyas">
+    <button onclick="login()" class="btn-login">دخول 🚀</button>
+  </div>
+</div>
+
+<div class="container">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <a href="javascript:void(0)" onclick="google.script.run.withSuccessHandler(url => window.open(url, '_top')).getScriptUrl()" style="text-decoration: none; color: #3498db; font-weight: bold;">➕ إضافة كلمات</a>
+        <h2 style="margin:0;">📚 قاموسي</h2>
+    <button onclick="exportToPDF()" class="btn-page" style="margin-bottom: 10px; background: #e67e22; color: white; border: none;">
+    📥 تصدير PDF
+</button>
+  </div>
+  
+  <div class="stats-bar">
+    <div class="stat-card"><h3 id="totalWords">0</h3><p>الإجمالي</p></div>
+    <div class="stat-card"><h3 id="todayWords">0</h3><p>اليوم</p></div>
+    <div class="stat-card" style="background: rgba(46, 204, 113, 0.1);"><h3 id="dueCountTop">0</h3><p>مستحق</p></div>
+  </div>
+
+  <button onclick="startQuiz()" class="btn-quiz">🧠 مراجعة (<span id="dueCountBtn">0</span>)</button>
+
+  <input type="text" id="searchInput" class="search-box" placeholder="ابحث في كلماتك..." onkeyup="filterTable()">
+
+  <div class="table-wrapper">
+    <table>
+      <thead>
+        <tr>
+          <th>الإسبانية</th>
+          <th>العربية</th>
+          <th>المستوى</th>
+          <th>إدارة</th>
+        </tr>
+      </thead>
+      <tbody id="tableBody">
+        <tr><td colspan="4" style="text-align:center;">جاري التحميل...</td></tr>
+      </tbody>
+    </table>
+    
+  </div>
+  <div id="paginationControls" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 20px;">
+    </div>
+</div>
+
+<div id="logoutModal" class="quiz-overlay">
+  <div class="quiz-card" style="max-width: 300px;">
+    <div style="font-size: 40px;">👋</div>
+    <h3>تسجيل الخروج</h3>
+    <p>هل تريد المغادرة؟</p>
+    <div style="display: flex; gap: 10px; margin-top: 20px;">
+      <button onclick="confirmLogout()" style="background:#e74c3c; flex:1; padding:12px; color:white; border:none; border-radius:8px; cursor:pointer;">خروج</button>
+      <button onclick="closeLogoutModal()" style="background:#bdc3c7; flex:1; padding:12px; color:white; border:none; border-radius:8px; cursor:pointer;">إلغاء</button>
+    </div>
+  </div>
+</div>
+<div id="quizOverlay" class="quiz-overlay">
+  <div class="quiz-card">
+    <button onclick="closeQuiz()" style="position:absolute; top:15px; left:15px; border:none; background:none; font-size:24px; cursor:pointer; color:#ccc;">✕</button>
+    <p style="color:#7f8c8d; margin:0;">ترجم للغة الإسبانية:</p>
+    <h1 id="quizArWord" style="margin: 10px 0; font-size: 36px;">---</h1>
+    <input type="text" id="quizInput" class="quiz-input" placeholder="اكتب هنا..." autocomplete="off" onkeypress="if(event.key==='Enter') checkAnswer()">
+    <div id="feedback" style="margin-bottom: 20px; font-weight: bold; font-size: 18px; min-height: 25px;"></div>
+    <button id="checkBtn" onclick="checkAnswer()" class="btn-check">تحقق ✅</button>
+  </div>
+</div>
+<div id="toast">لا يوجد كلمات للمراجعة حالياً! ☕</div>
+
+
+<div id="deleteModal" class="quiz-overlay">
+  <div class="quiz-card" style="max-width: 320px; padding: 30px; border: 1px solid var(--primary);">
+    <div style="font-size: 45px; margin-bottom: 10px;">⚠️</div>
+    <h3 style="margin-top: 0; color: var(--text);">تأكيد الحذف</h3>
+    <p id="deleteMsg" style="color: #7f8c8d; margin-bottom: 25px;"></p>
+    
+    <div style="display: flex; gap: 10px;">
+      <button onclick="executeDelete()" class="btn-page" style="background: #e74c3c; color: white; border: none; flex: 1; padding: 12px;">حذف</button>
+      <button onclick="closeDeleteModal()" class="btn-page" style="flex: 1; padding: 12px;">إلغاء</button>
+    </div>
+  </div>
+</div>
+<script>
+
+  let isProcessing = false; // القفل لمنع التكرار
+
+
+// تعريف المتغيرات مرة واحدة فقط لضمان عملها في كل الدوال
+  let currentUser = localStorage.getItem('app_user_id');
+  let allWords = [];      // كل الكلمات من السيرفر
+  let filteredWords = []; // الكلمات بعد الفلترة أو البحث
+  let dueWords = [];      // الكلمات المستحقة للكويز
+  let currentPage = 1;
+  const rowsPerPage = 8;  // عدد الكلمات في كل صفحة
+  
+  // دالة التشغيل عند التحميل
+  window.onload = function() {
+    if (localStorage.getItem('theme_list') === 'dark') {
+      document.body.classList.add('dark');
+      document.getElementById('themeBtn').innerText = "☀️";
+    }
+    if (!currentUser) {
+      document.getElementById('loginOverlay').style.display = 'flex';
+    } else {
+      updateUIForUser();
+      loadData();
+    }
+  };
+
+  function toggleTheme() {
+    const isDark = document.body.classList.toggle('dark');
+    document.getElementById('themeBtn').innerText = isDark ? "☀️" : "🌙";
+    localStorage.setItem('theme_list', isDark ? 'dark' : 'light');
+  }
+
+  function login() {
+    const input = document.getElementById('userNameInput');
+    const name = input.value.trim().toLowerCase();
+    
+    if (name.length < 3) {
+        showToast("الاسم قصير جداً! ⚠️");
+        return;
+    }
+
+    // 1. حفظ الاسم في المتصفح
+    localStorage.setItem('app_user_id', name);
+    currentUser = name;
+
+    // 2. إخفاء نافذة الدخول فوراً
+    document.getElementById('loginOverlay').style.display = 'none';
+    
+    // 3. تحديث الواجهة والبدء بجلب البيانات دون ريفريش
+    updateUIForUser();
+    loadData();
+    
+    showToast(`أهلاً بك مجدداً ${name.toUpperCase()} 👋`);
+}
+
+  function logout() { document.getElementById('logoutModal').style.display = 'flex'; }
+  function closeLogoutModal() { document.getElementById('logoutModal').style.display = 'none'; }
+  
+ function confirmLogout() {
+    // 1. مسح البيانات
+    localStorage.removeItem('app_user_id');
+    currentUser = null;
+    allWords = [];
+    filteredWords = [];
+
+    // 2. تنظيف الواجهة (صفر العدادات والجدول)
+    document.getElementById('totalWords').innerText = "0";
+    document.getElementById('todayWords').innerText = "0";
+    document.getElementById('dueCountTop').innerText = "0";
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="4" style="text-align:center;">يرجى تسجيل الدخول...</td></tr>';
+    
+    // 3. إخفاء شريط المستخدم وإظهار نافذة الدخول
+    document.getElementById('userStatus').style.display = 'none';
+    document.getElementById('logoutModal').style.display = 'none';
+    document.getElementById('loginOverlay').style.display = 'flex';
+    
+    // 4. تصفير حقل الإدخال للحق المرة القادمة
+    document.getElementById('userNameInput').value = "";
+    
+    showToast("تم تسجيل الخروج بنجاح 👋");
+}
+
+  function updateUIForUser() {
+    const status = document.getElementById('userStatus');
+    const nameDisplay = document.getElementById('currentDisplayName');
+    
+    if (status && nameDisplay && currentUser) {
+        status.style.display = 'flex';
+        nameDisplay.innerText = currentUser.toUpperCase();
+    }
+}
+
+function loadData() {
+    if(!currentUser) return;
+    
+    // إظهار رسالة تحميل بسيطة في الجدول قبل وصول البيانات
+    document.getElementById('tableBody').innerHTML = '<tr><td colspan="4" style="text-align:center;">جاري جلب بياناتك... ⏳</td></tr>';
+
+    google.script.run.withSuccessHandler(function(words) {
+      allWords = words || [];
+      filteredWords = [...allWords]; // نأخذ نسخة تفادياً لمشاكل الـ Reference
+      
+      currentPage = 1; // مهم جداً: العودة للصفحة الأولى عند كل تحميل
+      
+      calculateStats(); // تحديث العدادات أولاً
+      renderTable(filteredWords); // عرض الجدول بناءً على النسخة المفلترة
+    }).getAllWords(currentUser);
+}
+function renderTable(dataToDisplay) {
+    const tbody = document.getElementById('tableBody');
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    
+    // تقسيم البيانات المرسلة للدالة (سواء كانت كل الكلمات أو نتائج البحث)
+    const paginatedData = dataToDisplay.slice(start, end);
+
+    if (paginatedData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;">لا توجد نتائج مطابقة.</td></tr>';
+        document.getElementById('paginationControls').innerHTML = "";
+        return;
+    }
+
+    tbody.innerHTML = paginatedData.map(w => `
+      <tr>
+        <td><span class="sp-word">${w.sp}</span> <button onclick="speak('${w.sp}')" style="background:none; border:none; cursor:pointer;">🔊</button></td>
+        <td>${w.ar}</td>
+        <td><span class="lvl">Lvl ${w.level || 1}</span></td>
+        <td><button onclick="deleteWordConfirm('${w.sp}')" style="background:none; border:none; cursor:pointer; color:#e74c3c;">🗑️</button></td>
+      </tr>
+    `).join('');
+
+    // تحديث أزرار التنقل بناءً على طول البيانات الحالية
+    renderPaginationControls(dataToDisplay.length);
+}
+function calculateStats() {
+    if (!allWords) return;
+    
+    document.getElementById('totalWords').innerText = allWords.length;
+    
+    const now = new Date();
+    const todayStr = now.toDateString(); // "Thu Mar 26 2026"
+
+    let addedToday = 0;
+    dueWords = []; // تأكد أن هذه المصفوفة معرفة في أعلى الملف let dueWords = [];
+
+    allWords.forEach(w => {
+        // حساب كلمات اليوم
+        if (w.date) {
+            const d = new Date(w.date);
+            if (d.toDateString() === todayStr) addedToday++;
+        }
+
+        // حساب الكلمات المستحقة للكويز
+        if (w.date_review) {
+            const rd = new Date(w.date_review);
+            if (rd <= now) dueWords.push(w);
+        }
     });
 
-    const data = await response.json();
-    return data.data.translations[0].translatedText;
-  } catch (error) {
-    console.error("Translation error:", error);
-    return null;
+    // تحديث واجهة المستخدم
+    document.getElementById('todayWords').innerText = addedToday;
+    document.getElementById('dueCountTop').innerText = dueWords.length;
+    document.getElementById('dueCountBtn').innerText = dueWords.length;
+}
+
+
+function filterTable() {
+    const q = document.getElementById('searchInput').value.toLowerCase();
+    
+    // الفلترة تتم دائماً من المصفوفة الأصلية الكاملة
+    filteredWords = allWords.filter(w => 
+        w.sp.toLowerCase().includes(q) || 
+        w.ar.toLowerCase().includes(q)
+    );
+
+    // إعادة المستخدم للصفحة الأولى عند كل عملية بحث جديدة
+    currentPage = 1; 
+    
+    // عرض الجدول بناءً على النتائج المفلترة
+    renderTable(filteredWords);
+}
+  function speak(t) {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = 'es-ES';
+    speechSynthesis.speak(u);
+  }
+  function renderPaginationControls(totalItems) {
+    const totalPages = Math.ceil(totalItems / rowsPerPage);
+    const container = document.getElementById('paginationControls');
+    
+    container.innerHTML = `
+        <button onclick="changePage(-1)" ${currentPage === 1 ? 'disabled' : ''} class="btn-page">السابق</button>
+        <span style="font-weight: bold;">صفحة ${currentPage} من ${totalPages}</span>
+        <button onclick="changePage(1)" ${currentPage === totalPages ? 'disabled' : ''} class="btn-page">التالي</button>
+    `;
+}
+
+function changePage(step) {
+    currentPage += step;
+    
+    // إذا كان حقل البحث فارغاً، نعرض من allWords، وإذا كان فيه نص، نعرض من filteredWords
+    const q = document.getElementById('searchInput').value.trim();
+    const dataToUse = q ? filteredWords : allWords;
+    
+    renderTable(dataToUse);
+    document.querySelector('.table-wrapper').scrollTop = 0;
+}
+
+function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.innerText = message;
+    toast.className = "show";
+    setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+}
+function exportToPDF() {
+   // استدعاء التوست الأنيق
+    showToast("جاري تحضير ملف الـ PDF... ⏳");
+    // 1. إنشاء حاوية مؤقتة غير مرئية
+    const element = document.createElement('div');
+    element.style.direction = 'rtl';
+    element.style.padding = '20px';
+    element.style.fontFamily = 'Segoe UI, Tahoma, sans-serif';
+
+    // 2. تصميم محتوى الـ PDF (هيدر + جدول كامل)
+    // 2. تصميم محتوى الـ PDF (بدون عمود الليفل)
+   // 2. تصميم محتوى الـ PDF (مرتب أبجدياً وبدون ليفل)
+    let tableContent = `
+        <h2 style="text-align: center; color: #2c3e50; margin-bottom: 5px;">قاموسي الإسباني 📚</h2>
+        <p style="text-align: center; color: #7f8c8d; margin-bottom: 20px;">قائمة الكلمات الكاملة للمستخدم: ${currentUser.toUpperCase()}</p>
+        <table style="width: 100%; border-collapse: collapse; font-family: 'Segoe UI', sans-serif;">
+            <thead>
+                <tr style="background-color: #34495e; color: white;">
+                    <th style="padding: 12px; border: 1px solid #ddd; width: 50%; text-align: right;">الإسبانية (Español)</th>
+                    <th style="padding: 12px; border: 1px solid #ddd; width: 50%; text-align: right;">العربية (Árabe)</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${allWords
+                    .slice() // نأخذ نسخة من المصفوفة عشان ما نخرب ترتيب الجدول الأصلي في الصفحة
+                    .sort((a, b) => a.sp.localeCompare(b.sp)) // الترتيب الأبجدي بناءً على الكلمة الإسبانية
+                    .map(w => `
+                    <tr>
+                        <td style="padding: 10px; border: 1px solid #ddd; font-weight: bold; color: #2980b9;">${w.sp}</td>
+                        <td style="padding: 10px; border: 1px solid #ddd;">${w.ar}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    `;
+
+    element.innerHTML = tableContent;
+
+    // 3. إعدادات المكتبة للتصدير
+    const opt = {
+        margin:       10,
+        filename:     `Spanish_Dictionary_${currentUser}.pdf`,
+        image:        { type: 'jpeg', quality: 0.98 },
+        html2canvas:  { scale: 2, useCORS: true },
+        jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
+    // 4. التشغيل
+    showToast("جاري تحضير ملف الـ PDF... ⏳");
+    html2pdf().set(opt).from(element).save();
+}
+let wordToDel = ""; // متغير وسيط فقط
+
+function deleteWordConfirm(word) {
+    wordToDel = word; // حفظ الكلمة مؤقتاً
+    document.getElementById('deleteMsg').innerText = `هل أنت متأكد من حذف "${word}"؟`;
+    document.getElementById('deleteModal').style.display = 'flex';
+}
+
+// دالة التنفيذ اللي بيناديها الزر الأحمر في المودال
+function executeDelete() {
+    const word = wordToDel; // نأخذ الكلمة المحفوظة
+    document.getElementById('deleteModal').style.display = 'none'; // إغلاق المودال
+    
+    // الآن ننفذ نفس الكود اللي كان عندك وشغال تمام
+    google.script.run.withSuccessHandler(() => {
+        showToast("تم الحذف ✅");
+        allWords = allWords.filter(w => w.sp !== word);
+        filteredWords = filteredWords.filter(w => w.sp !== word);
+        calculateStats();
+        renderTable(filteredWords); 
+    }).deleteWord(word, currentUser);
+}
+
+function closeDeleteModal() {
+    document.getElementById('deleteModal').style.display = 'none';
+}
+let currentWord = null; // ضروري جداً لتعريف الكلمة الحالية
+
+function startQuiz() {
+  if (dueWords.length === 0) {
+    showToast("ممتاز! لقد أنهيت مراجعة كل الكلمات المستحقة 🌟");
+    return;
+  }
+  
+  // اختيار كلمة عشوائية من الكلمات المستحقة
+  currentWord = dueWords[Math.floor(Math.random() * dueWords.length)];
+  
+  document.getElementById('quizArWord').innerText = currentWord.ar;
+  document.getElementById('quizInput').value = "";
+  document.getElementById('feedback').innerText = "";
+  document.getElementById('quizOverlay').style.display = 'flex';
+  document.getElementById('quizInput').focus();
+}
+
+function checkAnswer() {
+  // 1. فحص القفل: إذا كانت الدالة تعمل حالياً، اخرج فوراً
+  if (isProcessing) return; 
+
+  const inputField = document.getElementById('quizInput');
+  const userAns = inputField.value.trim().toLowerCase();
+  
+  // منع الإرسال إذا كان الحقل فارغاً تماماً
+  if (userAns === "") return;
+
+  const correctAns = currentWord.sp.trim().toLowerCase();
+  const fb = document.getElementById('feedback');
+  const btn = document.getElementById('checkBtn');
+
+  // 2. تفعيل القفل وتعطيل الزر
+  isProcessing = true;
+  if (btn) btn.disabled = true;
+
+  if (userAns === correctAns) {
+    fb.innerHTML = "<span style='color:#2ecc71'>ممتاز! إجابة صحيحة 🌟</span>";
+    google.script.run.withSuccessHandler(() => {
+      setTimeout(() => { 
+        loadData(); 
+        isProcessing = false; // 3. فتح القفل بعد النجاح
+        if (btn) btn.disabled = false;
+        if(dueWords.length > 1) startQuiz(); else closeQuiz(); 
+      }, 1000);
+    }).updateWordLevel(currentWord.sp, true, currentUser);
+  } else {
+    fb.innerHTML = `<span style='color:#e74c3c'>خطأ، الصحيح: ${currentWord.sp}</span>`;
+    google.script.run.withSuccessHandler(() => {
+      setTimeout(() => { 
+        loadData();
+        isProcessing = false; // 3. فتح القفل بعد الخطأ
+        if (btn) btn.disabled = false;
+        startQuiz(); 
+      }, 2500);
+    }).updateWordLevel(currentWord.sp, false, currentUser);
   }
 }
 
-async function searchWord() {
-  const word = document.getElementById("wordInput").value.trim();
-  const lang = document.getElementById("languageSelect").value;
-  if (!word) return;
-
-  const translated = await translateLangbly(word, lang);
-  currentWordData = { word: word, meaning: translated || "Translation failed" };
-  document.getElementById("result").innerText = `${currentWordData.word} = ${currentWordData.meaning}`;
-}
-
-async function saveWordOnline() {
-  if (!currentWordData) return;
-
-  try {
-    const res = await fetch(WEB_APP_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        word: currentWordData.word,
-        meaning: currentWordData.meaning,
-        language: document.getElementById("languageSelect").value
-      })
-    });
-    const data = await res.json();
-    console.log("Word saved:", data);
-    fetchSavedWords(); // تحديث القائمة بعد الحفظ
-  } catch (err) {
-    console.error("Error saving word:", err);
-  }
-}
-
-async function fetchSavedWords() {
-  try {
-    const res = await fetch(WEB_APP_URL);
-    const data = await res.json();
-    displayOnlineWords(data);
-  } catch (err) {
-    console.error("Error fetching words:", err);
-  }
-}
-
-function displayOnlineWords(words) {
-  const list = document.getElementById("savedList");
-  list.innerHTML = "";
-
-  words.forEach((w) => {
-    const li = document.createElement("li");
-    li.innerText = `${w.word} = ${w.meaning}`;
-    list.appendChild(li);
-  });
-}
-
-window.addEventListener("DOMContentLoaded", () => {
-  document.getElementById("searchBtn").addEventListener("click", searchWord);
-  document.getElementById("saveBtn").addEventListener("click", saveWordOnline);
-  document.getElementById("refreshBtn").addEventListener("click", fetchSavedWords);
-  fetchSavedWords();
-});
+function closeQuiz() { document.getElementById('quizOverlay').style.display = 'none'; }
+</script>
+</body>
+</html>
