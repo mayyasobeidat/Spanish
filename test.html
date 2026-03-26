@@ -138,150 +138,175 @@
     </div>
 
     <script>
-        let currentUser = localStorage.getItem('app_user_id');
-        let myWords = [];
-        let skippedWords = [];
-        let currentIndex = 0;
-        let isReviewingSkipped = false;
-        let correctFirstTry = 0;
-        let totalTested = 0;
+         // 1. الرابط الخاص بك
+    const API_URL = "https://script.google.com/macros/s/AKfycbz71BmhXe21Ny1ZOMoZK-aiWHkZ2IMLIckXhDK0vFlRsMkJqPdeTU5HKGsTDsg1GDvO/exec";
 
-        window.onload = function () {
-            // تطبيق الثيم
-            const savedTheme = localStorage.getItem('theme_list');
-            if (savedTheme === 'dark') {
-                document.body.classList.add('dark');
-                document.getElementById('themeBtn').innerText = "☀️";
-            }
+    let currentUser = localStorage.getItem('app_user_id');
+    let myWords = [];
+    let skippedWords = [];
+    let currentIndex = 0;
+    let isReviewingSkipped = false;
+    let correctFirstTry = 0;
+    let totalTested = 0;
 
-            // التحقق من اليوزر
-            if (!currentUser) {
-                document.getElementById('loginOverlay').style.display = 'flex';
+    window.onload = function () {
+        const savedTheme = localStorage.getItem('theme_list');
+        if (savedTheme === 'dark') {
+            document.body.classList.add('dark');
+            document.getElementById('themeBtn').innerText = "☀️";
+        }
+
+        if (!currentUser) {
+            document.getElementById('loginOverlay').style.display = 'flex';
+        } else {
+            startLoading();
+        }
+    };
+
+    function login() {
+        const name = document.getElementById('userNameInput').value.trim().toLowerCase();
+        if (name.length < 3) { alert("الاسم قصير جداً!"); return; }
+        localStorage.setItem('app_user_id', name);
+        currentUser = name;
+        location.reload();
+    }
+
+       // --- دالة جلب الكلمات المعدلة بـ Fetch ---
+    async function startLoading() {
+        document.getElementById('questionWord').innerText = "جاري تحضير الاختبار... ⏳";
+        try {
+            // نستخدم نفس الأكشن getWords لأنها تجلب كلمات المستخدم
+            const response = await fetch(`${API_URL}?action=getWords&user=${currentUser}`);
+            const words = await response.json();
+            
+            myWords = words || [];
+            if (myWords.length > 0) {
+                // خلط الكلمات عشوائياً للاختبار
+                myWords.sort(() => Math.random() - 0.5);
+                loadQuestion();
             } else {
-                startLoading();
+                document.getElementById('questionWord').innerText = "الدفتر فارغ! أضف كلمات أولاً.";
             }
-        };
-
-        function login() {
-            const name = document.getElementById('userNameInput').value.trim().toLowerCase();
-            if (name.length < 3) { alert("الاسم قصير جداً!"); return; }
-            localStorage.setItem('app_user_id', name);
-            location.reload();
+        } catch (error) {
+            console.error("Test Loading Error:", error);
+            document.getElementById('questionWord').innerText = "❌ فشل تحميل الكلمات";
         }
+    }
 
-        function startLoading() {
-            google.script.run.withSuccessHandler(function (words) {
-                myWords = words;
-                if (myWords && myWords.length > 0) {
+    function loadQuestion() {
+        const resultDiv = document.getElementById('resultMsg');
+        const inputField = document.getElementById('userAnswer');
+        
+        if (currentIndex >= myWords.length) {
+            if (skippedWords.length > 0) {
+                resultDiv.innerHTML = `<div style="color:#f39c12">انتهت الجولة!<br>جاري تحضير الكلمات المتخطاة...</div>`;
+                setTimeout(() => {
+                    myWords = skippedWords; 
+                    skippedWords = []; 
+                    currentIndex = 0; 
+                    isReviewingSkipped = true; 
                     loadQuestion();
-                } else {
-                    document.getElementById('questionWord').innerText = "الدفتر فارغ!";
-                    document.getElementById('progressInfo').innerText = "";
-                }
-            }).getWordsForTest(currentUser); // نرسل اليوزر لجلب كلماته فقط
-        }
-
-        function loadQuestion() {
-            const resultDiv = document.getElementById('resultMsg');
-            const inputField = document.getElementById('userAnswer');
-            if (currentIndex >= myWords.length) {
-                if (skippedWords.length > 0) {
-                    resultDiv.innerHTML = `<div style="color:var(--warning)">انتهت الجولة!<br>جاري تحضير المتخطى...</div>`;
-                    setTimeout(() => {
-                        myWords = skippedWords; skippedWords = []; currentIndex = 0; isReviewingSkipped = true; loadQuestion();
-                    }, 1500);
-                    return;
-                } else { showFinalResult(); return; }
+                }, 1500);
+                return;
+            } else { 
+                showFinalResult(); 
+                return; 
             }
-            document.getElementById('progressInfo').innerText = `كلمة ${currentIndex + 1} من ${myWords.length} ${isReviewingSkipped ? '(مراجعة)' : ''}`;
-            document.getElementById('questionWord').innerText = myWords[currentIndex].sp;
-            inputField.value = ""; inputField.disabled = false; resultDiv.innerText = ""; inputField.focus();
+        }
+        
+        document.getElementById('progressInfo').innerText = `كلمة ${currentIndex + 1} من ${myWords.length} ${isReviewingSkipped ? '(مراجعة)' : ''}`;
+        document.getElementById('questionWord').innerText = myWords[currentIndex].sp;
+        inputField.value = ""; 
+        inputField.disabled = false; 
+        resultDiv.innerText = ""; 
+        inputField.focus();
+    }
+       // --- دالة التحقق وتحديث السيرفر (Fetch) ---
+    async function checkAnswer() {
+        const inputField = document.getElementById('userAnswer');
+        if (inputField.disabled || !inputField.value.trim()) return;
+
+        const userAnswer = normalize(inputField.value);
+        const wordObj = myWords[currentIndex];
+        const storedMeaning = wordObj.ar;
+        
+        // التعامل مع المعاني المتعددة (الفاصلة، الخط المائل، إلخ)
+        const possibleMeanings = storedMeaning.split(/[/،,-]/).map(m => normalize(m.trim()));
+        
+        let isCorrect = possibleMeanings.some(m => m === userAnswer);
+        let isClose = !isCorrect && possibleMeanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAnswer) === 1);
+        
+        const resultDiv = document.getElementById('resultMsg');
+        inputField.disabled = true;
+        const finalCheck = (isCorrect || isClose);
+
+        if (isCorrect) {
+            resultDiv.innerHTML = "<span style='color:green'>✅ صح! ممتاز.</span>";
+            if (!isReviewingSkipped) correctFirstTry++;
+        } else if (isClose) {
+            resultDiv.innerHTML = `<span style='color:#f39c12'>⚠️ قريبة! الإجابة: ${storedMeaning}</span>`;
+            if (!isReviewingSkipped) correctFirstTry++;
+        } else {
+            resultDiv.innerHTML = `<span style='color:red'>❌ خطأ. الإجابة: ${storedMeaning}</span>`;
         }
 
-        function checkAnswer() {
-    const inputField = document.getElementById('userAnswer');
-    if (inputField.disabled || !inputField.value.trim()) return;
+        // تحديث المستوى في جوجل شيت عبر الـ API
+        if (!isReviewingSkipped) {
+            totalTested++;
+            try {
+                const url = `${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${finalCheck}`;
+                fetch(url); // نرسلها في الخلفية ولا نحتاج لانتظار الرد لمتابعة الاختبار
+            } catch (e) { console.error("Update Level Error:", e); }
+        }
 
-    const userAnswer = normalize(inputField.value);
-    const wordObj = myWords[currentIndex]; // الكلمة الحالية
-    const storedMeaning = wordObj.ar;
-    const possibleMeanings = storedMeaning.split(/[/،,-]/).map(m => normalize(m.trim()));
-    
-    let isCorrect = possibleMeanings.some(m => m === userAnswer);
-    let isClose = !isCorrect && possibleMeanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAnswer) === 1);
-    
-    const resultDiv = document.getElementById('resultMsg');
-    inputField.disabled = true;
-    
-    // تحديد النتيجة النهائية للإرسال للسيرفر
-    const finalCheck = (isCorrect || isClose);
-
-    if (isCorrect) {
-        resultDiv.innerHTML = "<span style='color:green'>✅ صح! أحسنت.</span>";
-        if (!isReviewingSkipped) correctFirstTry++;
-    } else if (isClose) {
-        resultDiv.innerHTML = `<span style='color:#f39c12'>⚠️ قريبة! الإجابة: ${storedMeaning}</span>`;
-        if (!isReviewingSkipped) correctFirstTry++;
-    } else {
-        resultDiv.innerHTML = `<span style='color:red'>❌ خطأ. الإجابة: ${storedMeaning}</span>`;
+        currentIndex++;
+        setTimeout(loadQuestion, 1200);
     }
 
-    // --- الجزء الأهم: تحديث المستوى في السيرفر ---
-    // نقوم بتحديث المستوى فقط إذا لم نكن في مرحلة مراجعة الكلمات "المتخطاة"
-    if (!isReviewingSkipped) {
-        totalTested++;
-        // استدعاء الدالة الموجودة في Code.gs
-        google.script.run.updateWordLevel(wordObj.sp, finalCheck, currentUser);
+    // (باقي الدوال: skipWord, showFinalResult, normalize, getLevenshteinDistance, toggleTheme تبقى كما هي)
+    function skipWord() {
+        const inputField = document.getElementById('userAnswer');
+        if (inputField.disabled) return;
+        skippedWords.push(myWords[currentIndex]);
+        document.getElementById('resultMsg').innerHTML = "<span style='color:#f39c12'>⏭️ تم التخطي...</span>";
+        inputField.disabled = true;
+        currentIndex++;
+        setTimeout(loadQuestion, 800);
     }
-    // -------------------------------------------
 
-    currentIndex++;
-    setTimeout(loadQuestion, 1200);
-}
+    function showFinalResult() {
+        const percentage = totalTested > 0 ? ((correctFirstTry / totalTested) * 100).toFixed(1) : 0;
+        let grade = percentage > 80 ? "ممتاز! مدريد تنتظرك 🇪🇸" : percentage > 50 ? "جيد، استمر في التدريب" : "تحتاج لمراجعة أكثر";
+        document.getElementById('modalPercent').innerText = percentage + "%";
+        document.getElementById('modalBody').innerHTML = `✅ الإجابات الصحيحة: <b>${correctFirstTry}</b><br>📊 إجمالي المحاولات: <b>${totalTested}</b><br><br>${grade}`;
+        document.getElementById('resultModal').style.display = "flex";
+    }
 
-        function skipWord() {
-            const inputField = document.getElementById('userAnswer');
-            if (inputField.disabled) return;
-            skippedWords.push(myWords[currentIndex]);
-            document.getElementById('resultMsg').innerHTML = "<span style='color:#f39c12'>⏭️ تم التخطي...</span>";
-            inputField.disabled = true;
-            currentIndex++;
-            setTimeout(loadQuestion, 800);
-        }
+    function normalize(text) {
+        if (!text) return "";
+        let cleanText = text.trim().replace(/[\u064B-\u0652]/g, "").replace(/[اًأإآ]/g, "ا").replace(/ة/g, "ه").replace(/[يى]/g, "ى").replace(/\s+/g, "");
+        if (cleanText.startsWith("ال") && cleanText.length > 2) cleanText = cleanText.substring(2);
+        return cleanText.toLowerCase();
+    }
 
-        function showFinalResult() {
-            const percentage = totalTested > 0 ? ((correctFirstTry / totalTested) * 100).toFixed(1) : 0;
-            let grade = percentage > 80 ? "ممتاز! مدريد تنتظرك 🇪🇸" : percentage > 50 ? "جيد، استمر في التدريب" : "تحتاج لمراجعة أكثر";
-            document.getElementById('modalPercent').innerText = percentage + "%";
-            document.getElementById('modalBody').innerHTML = `✅ الإجابات الصحيحة: <b>${correctFirstTry}</b><br>📊 إجمالي المحاولات: <b>${totalTested}</b><br><br>${grade}`;
-            document.getElementById('resultModal').style.display = "flex";
-        }
-
-        function normalize(text) {
-            if (!text) return "";
-            let cleanText = text.trim().replace(/[\u064B-\u0652]/g, "").replace(/[اًأإآ]/g, "ا").replace(/ة/g, "ه").replace(/[يى]/g, "ى").replace(/\s+/g, "");
-            if (cleanText.startsWith("ال") && cleanText.length > 2) cleanText = cleanText.substring(2);
-            return cleanText.toLowerCase();
-        }
-
-        function getLevenshteinDistance(a, b) {
-            const matrix = Array.from({ length: a.length + 1 }, () => []);
-            for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
-            for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
-            for (let i = 1; i <= a.length; i++) {
-                for (let j = 1; j <= b.length; j++) {
-                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-                    matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
-                }
+    function getLevenshteinDistance(a, b) {
+        const matrix = Array.from({ length: a.length + 1 }, () => []);
+        for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+        for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+        for (let i = 1; i <= a.length; i++) {
+            for (let j = 1; j <= b.length; j++) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
             }
-            return matrix[a.length][b.length];
         }
+        return matrix[a.length][b.length];
+    }
 
-        function toggleTheme() {
-            const isDark = document.body.classList.toggle('dark');
-            document.getElementById('themeBtn').innerText = isDark ? "☀️" : "🌙";
-            localStorage.setItem('theme_list', isDark ? 'dark' : 'light');
-        }
+    function toggleTheme() {
+        const isDark = document.body.classList.toggle('dark');
+        document.getElementById('themeBtn').innerText = isDark ? "☀️" : "🌙";
+        localStorage.setItem('theme_list', isDark ? 'dark' : 'light');
+    }
     </script>
 </body>
 </html>
