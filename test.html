@@ -185,7 +185,7 @@
 
        // --- دالة جلب الكلمات المعدلة بـ Fetch ---
     async function startLoading() {
-        document.getElementById('questionWord').innerText = "جاري تحضير الاختبار... ⏳";
+        document.getElementById('questionWord').innerText = ⏳";
         try {
             // نستخدم نفس الأكشن getWords لأنها تجلب كلمات المستخدم
             const response = await fetch(`${API_URL}?action=getWords&user=${currentUser}`);
