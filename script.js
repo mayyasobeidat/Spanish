@@ -1,7 +1,23 @@
-// استبدل هذا الرابط برابط الـ Deployment الخاص بك من Google Apps Script
 const API_URL = "https://script.google.com/macros/s/AKfycbwEQlq4PQTlhPTJGfbl_l83dhDMPQLnqNF1zuVvFu4ourXe5T3kaw1iKHggkTri_Lta/exec";
-const currentUser = localStorage.getItem('app_user_id');
 
+async function saveNewWord(spanish, arabic, user) {
+    // تشفير الكلمات عشان الروابط ما تخرب بسبب المسافات أو الحروف الخاصة
+    const sp = encodeURIComponent(spanish);
+    const ar = encodeURIComponent(arabic);
+    
+    const saveUrl = `${API_URL}?action=save&user=${user}&sp=${sp}&ar=${ar}`;
+
+    try {
+        const response = await fetch(saveUrl);
+        const data = await response.json();
+        console.log("الرد من السيرفر:", data);
+        if (data.includes("✅")) {
+            alert("تم الحفظ بنجاح!");
+        }
+    } catch (error) {
+        console.error("فشل الاتصال:", error);
+    }
+}
 async function loadData() {
     if (!currentUser) return;
     
