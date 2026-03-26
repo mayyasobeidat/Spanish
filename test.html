@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+    <title>اختبار الكلمات الإسبانية</title>
+    <base target="_top">
+    <style>
+        :root {
+            --primary: #3498db; --success: #2ecc71; --warning: #f39c12;
+            --danger: #e74c3c; --bg: #f4f7f6;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif; background: var(--bg);
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; margin: 0; transition: 0.3s;
+        }
+        body.dark { background: #1a1a2e; color: #e0e0e0; }
+        .card {
+            background: white; padding: 30px; border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1); max-width: 450px;
+            width: 90%; text-align: center;
+        }
+        body.dark .card { background: #16213e; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h2 { color: var(--primary); margin-bottom: 20px; }
+        #questionWord { font-size: 48px; margin: 20px 0; color: #2c3e50; }
+        body.dark #questionWord { color: #4db8ff; }
+        input {
+            width: 100%; padding: 12px; margin: 15px 0; border: 2px solid #ddd;
+            border-radius: 10px; font-size: 18px; text-align: center; box-sizing: border-box;
+        }
+        body.dark input { background: #0f3460; border-color: #1a1a2e; color: white; }
+        .btn-group { display: flex; gap: 10px; justify-content: center; }
+        button { border: none; padding: 12px 20px; border-radius: 10px; cursor: pointer; font-size: 16px; font-weight: bold; transition: 0.3s; color: white; }
+        #checkBtn { background: var(--success); flex: 2; }
+        #skipBtn { background: var(--warning); flex: 1; }
+        .msg { margin-top: 20px; font-size: 18px; min-height: 30px; font-weight: bold; }
+        .progress { font-size: 14px; color: #7f8c8d; margin-bottom: 10px; }
+
+        /* واجهة الدخول */
+        #loginOverlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(44, 62, 80, 0.95); z-index: 10000;
+            display: none; justify-content: center; align-items: center;
+        }
+        .login-card { background: white; padding: 30px; border-radius: 15px; text-align: center; width: 90%; max-width: 350px; }
+
+        /* نافذة النتائج */
+        .modal-overlay {
+            display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); justify-content: center; align-items: center; z-index: 1000;
+        }
+        .result-modal { background: white; padding: 40px; border-radius: 25px; text-align: center; max-width: 400px; width: 85%; }
+        body.dark .result-modal { background: #16213e; color: white; }
+        .stat-circle {
+            width: 100px; height: 100px; border-radius: 50%; border: 8px solid var(--success);
+            display: flex; align-items: center; justify-content: center; font-size: 24px;
+            font-weight: bold; margin: 20px auto; color: var(--primary);
+        }
+        .theme-switch { position: fixed; top: 20px; left: 20px; background: #34495e; color: white; border: none; padding: 10px; border-radius: 50%; cursor: pointer; font-size: 20px; z-index: 1001; }
+
+        /* تعديلات الموبايل (للشاشات الأصغر من 600 بكسل) */
+@media (max-width: 600px) {
+    body { padding-top: 70px; } /* تقليل المسافة العلوية */
+
+    .container { 
+        padding: 15px; 
+        margin: 10px; 
+        border-radius: 10px; 
+    }
+
+    /* تحويل الإحصائيات لصفوف أصغر */
+    .stats-bar { 
+        gap: 8px; 
+    }
+    .stat-card { padding: 10px; }
+    .stat-card h3 { font-size: 18px; }
+    .stat-card p { font-size: 12px; }
+
+    /* تحسين الجدول للموبايل: إخفاء الأعمدة غير الضرورية إذا لزم الأمر */
+    td, th { padding: 10px 5px; font-size: 14px; }
+    .sp-word { font-size: 15px; }
+
+    /* تكبير الأزرار لتناسب اللمس بالإصبع */
+    .btn-quiz, .btn-page, .btn-check {
+        padding: 15px;
+        font-size: 16px;
+    }
+
+    /* تعديل واجهة الكويز لتملأ الشاشة */
+    .quiz-card {
+        width: 95%;
+        padding: 20px;
+        max-width: none;
+    }
+    #quizArWord { font-size: 28px; }
+    
+    /* منع تكبير الشاشة التلقائي عند الكتابة في الآيفون */
+    input[type="text"] { font-size: 16px !important; }
+}
+    </style>
+</head>
+
+<body>
+    <div id="loginOverlay">
+        <div class="login-card">
+            <h3>🇪🇸 مرحباً بك في الاختبار</h3>
+            <p>أدخل اسمك للبدء:</p>
+            <input type="text" id="userNameInput" placeholder="اسم المستخدم..." style="text-align: center;">
+            <button onclick="login()" style="background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px;">بدء 🚀</button>
+        </div>
+    </div>
+
+    <button class="theme-switch" onclick="toggleTheme()" id="themeBtn">🌙</button>
+
+    <div class="card">
+        <div class="progress" id="progressInfo">جاري تحميل الكلمات...</div>
+        <h2>اختبر معلوماتك</h2>
+        <p>ما معنى الكلمة التالية؟</p>
+        <h1 id="questionWord">...</h1>
+        <input type="text" id="userAnswer" placeholder="اكتب المعنى هنا" onkeypress="if(event.key === 'Enter') checkAnswer()">
+        <div class="btn-group">
+            <button onclick="checkAnswer()" id="checkBtn">تحقق ✅</button>
+            <button onclick="skipWord()" id="skipBtn">تخطي ⏭️</button>
+        </div>
+        <div id="resultMsg" class="msg"></div>
+    </div>
+
+    <div id="resultModal" class="modal-overlay">
+        <div class="result-modal">
+            <h2 id="modalTitle">🎉 انتهى الاختبار!</h2>
+            <div class="stat-circle" id="modalPercent">0%</div>
+            <p id="modalBody"></p>
+            <button onclick="window.location.reload()" style="background: var(--primary); width: 100%; margin-top: 20px; padding: 12px; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">إعادة الاختبار 🔄</button>
+            <button onclick="window.location.href='?page=index'" style="background: #95a5a6; width: 100%; margin-top: 10px; padding: 12px; color: white; border: none; border-radius: 10px; cursor: pointer; font-weight: bold;">العودة للرئيسية 🏠</button>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = localStorage.getItem('app_user_id');
+        let myWords = [];
+        let skippedWords = [];
+        let currentIndex = 0;
+        let isReviewingSkipped = false;
+        let correctFirstTry = 0;
+        let totalTested = 0;
+
+        window.onload = function () {
+            // تطبيق الثيم
+            const savedTheme = localStorage.getItem('theme_list');
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark');
+                document.getElementById('themeBtn').innerText = "☀️";
+            }
+
+            // التحقق من اليوزر
+            if (!currentUser) {
+                document.getElementById('loginOverlay').style.display = 'flex';
+            } else {
+                startLoading();
+            }
+        };
+
+        function login() {
+            const name = document.getElementById('userNameInput').value.trim().toLowerCase();
+            if (name.length < 3) { alert("الاسم قصير جداً!"); return; }
+            localStorage.setItem('app_user_id', name);
+            location.reload();
+        }
+
+        function startLoading() {
+            google.script.run.withSuccessHandler(function (words) {
+                myWords = words;
+                if (myWords && myWords.length > 0) {
+                    loadQuestion();
+                } else {
+                    document.getElementById('questionWord').innerText = "الدفتر فارغ!";
+                    document.getElementById('progressInfo').innerText = "";
+                }
+            }).getWordsForTest(currentUser); // نرسل اليوزر لجلب كلماته فقط
+        }
+
+        function loadQuestion() {
+            const resultDiv = document.getElementById('resultMsg');
+            const inputField = document.getElementById('userAnswer');
+            if (currentIndex >= myWords.length) {
+                if (skippedWords.length > 0) {
+                    resultDiv.innerHTML = `<div style="color:var(--warning)">انتهت الجولة!<br>جاري تحضير المتخطى...</div>`;
+                    setTimeout(() => {
+                        myWords = skippedWords; skippedWords = []; currentIndex = 0; isReviewingSkipped = true; loadQuestion();
+                    }, 1500);
+                    return;
+                } else { showFinalResult(); return; }
+            }
+            document.getElementById('progressInfo').innerText = `كلمة ${currentIndex + 1} من ${myWords.length} ${isReviewingSkipped ? '(مراجعة)' : ''}`;
+            document.getElementById('questionWord').innerText = myWords[currentIndex].sp;
+            inputField.value = ""; inputField.disabled = false; resultDiv.innerText = ""; inputField.focus();
+        }
+
+        function checkAnswer() {
+    const inputField = document.getElementById('userAnswer');
+    if (inputField.disabled || !inputField.value.trim()) return;
+
+    const userAnswer = normalize(inputField.value);
+    const wordObj = myWords[currentIndex]; // الكلمة الحالية
+    const storedMeaning = wordObj.ar;
+    const possibleMeanings = storedMeaning.split(/[/،,-]/).map(m => normalize(m.trim()));
+    
+    let isCorrect = possibleMeanings.some(m => m === userAnswer);
+    let isClose = !isCorrect && possibleMeanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAnswer) === 1);
+    
+    const resultDiv = document.getElementById('resultMsg');
+    inputField.disabled = true;
+    
+    // تحديد النتيجة النهائية للإرسال للسيرفر
+    const finalCheck = (isCorrect || isClose);
+
+    if (isCorrect) {
+        resultDiv.innerHTML = "<span style='color:green'>✅ صح! أحسنت.</span>";
+        if (!isReviewingSkipped) correctFirstTry++;
+    } else if (isClose) {
+        resultDiv.innerHTML = `<span style='color:#f39c12'>⚠️ قريبة! الإجابة: ${storedMeaning}</span>`;
+        if (!isReviewingSkipped) correctFirstTry++;
+    } else {
+        resultDiv.innerHTML = `<span style='color:red'>❌ خطأ. الإجابة: ${storedMeaning}</span>`;
+    }
+
+    // --- الجزء الأهم: تحديث المستوى في السيرفر ---
+    // نقوم بتحديث المستوى فقط إذا لم نكن في مرحلة مراجعة الكلمات "المتخطاة"
+    if (!isReviewingSkipped) {
+        totalTested++;
+        // استدعاء الدالة الموجودة في Code.gs
+        google.script.run.updateWordLevel(wordObj.sp, finalCheck, currentUser);
+    }
+    // -------------------------------------------
+
+    currentIndex++;
+    setTimeout(loadQuestion, 1200);
+}
+
+        function skipWord() {
+            const inputField = document.getElementById('userAnswer');
+            if (inputField.disabled) return;
+            skippedWords.push(myWords[currentIndex]);
+            document.getElementById('resultMsg').innerHTML = "<span style='color:#f39c12'>⏭️ تم التخطي...</span>";
+            inputField.disabled = true;
+            currentIndex++;
+            setTimeout(loadQuestion, 800);
+        }
+
+        function showFinalResult() {
+            const percentage = totalTested > 0 ? ((correctFirstTry / totalTested) * 100).toFixed(1) : 0;
+            let grade = percentage > 80 ? "ممتاز! مدريد تنتظرك 🇪🇸" : percentage > 50 ? "جيد، استمر في التدريب" : "تحتاج لمراجعة أكثر";
+            document.getElementById('modalPercent').innerText = percentage + "%";
+            document.getElementById('modalBody').innerHTML = `✅ الإجابات الصحيحة: <b>${correctFirstTry}</b><br>📊 إجمالي المحاولات: <b>${totalTested}</b><br><br>${grade}`;
+            document.getElementById('resultModal').style.display = "flex";
+        }
+
+        function normalize(text) {
+            if (!text) return "";
+            let cleanText = text.trim().replace(/[\u064B-\u0652]/g, "").replace(/[اًأإآ]/g, "ا").replace(/ة/g, "ه").replace(/[يى]/g, "ى").replace(/\s+/g, "");
+            if (cleanText.startsWith("ال") && cleanText.length > 2) cleanText = cleanText.substring(2);
+            return cleanText.toLowerCase();
+        }
+
+        function getLevenshteinDistance(a, b) {
+            const matrix = Array.from({ length: a.length + 1 }, () => []);
+            for (let i = 0; i <= a.length; i++) matrix[i][0] = i;
+            for (let j = 0; j <= b.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= a.length; i++) {
+                for (let j = 1; j <= b.length; j++) {
+                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                    matrix[i][j] = Math.min(matrix[i - 1][j] + 1, matrix[i][j - 1] + 1, matrix[i - 1][j - 1] + cost);
+                }
+            }
+            return matrix[a.length][b.length];
+        }
+
+        function toggleTheme() {
+            const isDark = document.body.classList.toggle('dark');
+            document.getElementById('themeBtn').innerText = isDark ? "☀️" : "🌙";
+            localStorage.setItem('theme_list', isDark ? 'dark' : 'light');
+        }
+    </script>
+</body>
+</html>
