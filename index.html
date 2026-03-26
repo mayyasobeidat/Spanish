@@ -248,6 +248,9 @@
 <div id="toast"></div>
 
 <script>
+  // 1. الرابط الجديد الخاص بك (تأكد من نسخه بالكامل)
+  const API_URL = "https://script.google.com/macros/s/AKfycbz71BmhXe21Ny1ZOMoZK-aiWHkZ2IMLIckXhDK0vFlRsMkJqPdeTU5HKGsTDsg1GDvO/exec";
+
   let currentUser = localStorage.getItem('app_user_id');
 
   window.onload = function() {
@@ -265,14 +268,15 @@
 
   function login() {
     const name = document.getElementById('userNameInput').value.trim().toLowerCase();
-    if (name.length < 3) { alert("الاسم قصير جداً!"); return; }
+    if (name.length < 3) { showToast("⚠️ الاسم قصير جداً!"); return; }
     localStorage.setItem('app_user_id', name);
     currentUser = name;
     document.getElementById('loginOverlay').style.display = 'none';
     updateUIForUser();
+    showToast(`أهلاً بك ${name.toUpperCase()} 👋`);
   }
 
-  function updateUIForUser() {
+ function updateUIForUser() {
     if (currentUser) {
       document.getElementById('userStatus').style.display = 'flex';
       document.getElementById('currentDisplayName').innerText = currentUser.toUpperCase();
@@ -280,13 +284,8 @@
   }
 
   // --- نظام الخروج المطور ---
-  function logout() {
-    document.getElementById('logoutModal').style.display = 'flex';
-  }
-
-  function closeLogoutModal() {
-    document.getElementById('logoutModal').style.display = 'none';
-  }
+ function logout() { document.getElementById('logoutModal').style.display = 'flex'; }
+  function closeLogoutModal() { document.getElementById('logoutModal').style.display = 'none'; }
 
   function confirmLogout() {
     localStorage.removeItem('app_user_id');
@@ -294,37 +293,68 @@
     document.getElementById('userStatus').style.display = 'none';
     document.getElementById('loginOverlay').style.display = 'flex';
     closeLogoutModal();
+    showToast("تم تسجيل الخروج 👋");
   }
 
-
-
-  function saveToMySheet() {
+ // --- دالة الحفظ المعدلة بـ Fetch ---
+  async function saveToMySheet() {
     const sp = document.getElementById('spWord').value.trim();
     const ar = document.getElementById('arMeaning').value.trim();
-    if(!sp || !ar) { showToast("⚠️ املأ الحقول"); return; }
+    
+    if(!sp || !ar) { showToast("⚠️ املأ الحقول أولاً"); return; }
     
     const btn = document.getElementById('saveBtn');
-    btn.disabled = true; btn.innerText = "جاري الحفظ...";
+    btn.disabled = true; 
+    btn.innerText = "جاري الحفظ... ⏳";
 
-    google.script.run.withSuccessHandler(function(msg) {
+    try {
+      // بناء الرابط مع تشفير الكلمات للحفاظ على الحروف الخاصة مثل (ñ, á)
+      const url = `${API_URL}?action=save&user=${currentUser}&sp=${encodeURIComponent(sp)}&ar=${encodeURIComponent(ar)}`;
+      
+      const response = await fetch(url);
+      const msg = await response.json(); // جوجل سكريبت بيرجع نص الرسالة
+
       showToast(msg);
-      document.getElementById('spWord').value = "";
-      document.getElementById('arMeaning').value = "";
-      document.getElementById('hintBox').style.display = "none";
-      btn.disabled = false; btn.innerText = "حفظ الكلمة ✨";
-    }).saveWord(sp, ar, currentUser);
+      
+      if(msg.includes("✅")) {
+        document.getElementById('spWord').value = "";
+        document.getElementById('arMeaning').value = "";
+        if(document.getElementById('hintBox')) document.getElementById('hintBox').style.display = "none";
+      }
+    } catch (error) {
+      console.error("Save Error:", error);
+      showToast("⚠️ فشل الاتصال بالسيرفر");
+    } finally {
+      btn.disabled = false; 
+      btn.innerText = "حفظ الكلمة ✨";
+    }
   }
 
-  function getHint() {
-    const word = document.getElementById('spWord').value;
+
+   // --- دالة الاقتراحات المعدلة بـ Fetch ---
+  async function getHint() {
+    const word = document.getElementById('spWord').value.trim();
     if(!word) return;
-    const hb = document.getElementById('hintBox');
-    hb.style.display = "block"; hb.innerHTML = 'جاري البحث...';
     
-    google.script.run.withSuccessHandler(function(res) {
-      hb.innerHTML = `<b>اقتراح:</b> ${res.ar}`;
-      if(!document.getElementById('arMeaning').value) document.getElementById('arMeaning').value = res.ar;
-    }).getTranslationHint(word);
+    const hb = document.getElementById('hintBox');
+    if(hb) {
+      hb.style.display = "block"; 
+      hb.innerHTML = 'جاري البحث عن ترجمة... 🔍';
+    }
+    
+    try {
+      const url = `${API_URL}?action=getHint&word=${encodeURIComponent(word)}`;
+      const response = await fetch(url);
+      const res = await response.json();
+      
+      if(hb) hb.innerHTML = `<b>اقتراح:</b> ${res.ar}`;
+      // تعبئة حقل المعنى تلقائياً إذا كان فارغاً
+      const arInput = document.getElementById('arMeaning');
+      if(arInput && !arInput.value) arInput.value = res.ar;
+      
+    } catch (error) {
+      if(hb) hb.innerHTML = '⚠️ تعذر جلب الاقتراح';
+    }
   }
 
   function toggleTheme() {
@@ -335,19 +365,17 @@
 
   function showToast(msg) {
     const t = document.getElementById("toast");
+    if(!t) return;
     t.innerText = msg;
-    t.style.backgroundColor = (msg.includes("⚠️")) ? "#f39c12" : "#2ecc71";
+    t.style.backgroundColor = (msg.includes("⚠️") || msg.includes("خطأ")) ? "#f39c12" : "#2ecc71";
     t.className = "show";
     setTimeout(() => { t.className = ""; }, 3000);
   }
+
   window.addEventListener('beforeinstallprompt', (e) => {
-  // منع المتصفح من إظهار التنبيه الافتراضي المزعج
-  e.preventDefault();
-  let deferredPrompt = e;
-  
-  // ممكن تظهر زر خاص عندك مكتوب عليه "تثبيت التطبيق"
-  console.log('التطبيق جاهز للتثبيت على سطح المكتب/الموبايل ✅');
-});
+    e.preventDefault();
+    console.log('التطبيق جاهز للتثبيت ✅');
+  });
 </script>
 </body>
 </html>
