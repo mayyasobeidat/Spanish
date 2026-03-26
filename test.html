@@ -10,6 +10,7 @@
     <title>اختبار الكلمات الإسبانية</title>
     <base target="_top">
     <style>
+        
         :root {
             --primary: #3498db; --success: #2ecc71; --warning: #f39c12;
             --danger: #e74c3c; --bg: #f4f7f6;
@@ -19,6 +20,39 @@
             display: flex; justify-content: center; align-items: center;
             min-height: 100vh; margin: 0; transition: 0.3s;
         }
+
+        /* تنسيق الـ Navbar الجديد */
+.top-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    padding: 15px 20px;
+    display: flex;
+    justify-content: space-between; /* واحد يمين وواحد يسار */
+    align-items: center;
+    box-sizing: border-box;
+    z-index: 1001;
+}
+
+.nav-btn {
+    width: 45px;
+    height: 45px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    transition: 0.3s;
+}
+
+.home-btn { background: var(--danger); color: white; }
+.theme-btn { background: #34495e; color: white; }
+
+        
         body.dark { background: #1a1a2e; color: #e0e0e0; }
         .card {
             background: white; padding: 30px; border-radius: 20px;
@@ -65,13 +99,26 @@
 
         /* تعديلات الموبايل (للشاشات الأصغر من 600 بكسل) */
 @media (max-width: 600px) {
-   
+    .top-nav {
+        padding: 10px 15px;
+    }
+     #questionWord {
+        font-size: 30px; /* تصغير الخط قليلاً ليناسب العرض */
+    }
+    
+    .nav-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
       .login-card, .quiz-card { 
       width: 75%;
     }
-  .card {
-     width: 75%;
-  }
+.card {
+        width: 85%; /* تكبير الكارد قليلاً على الموبايل */
+        padding: 20px;
+        margin-top: 60px; /* إزاحة الكارد لأسفل عشان ما يخبط في النوابار */
+    }
 
     .container { 
         padding: 15px; 
@@ -120,13 +167,11 @@
             <button onclick="login()" style="background: var(--primary); color: white; border: none; padding: 12px; width: 100%; border-radius: 10px; cursor: pointer; font-weight: bold; margin-top: 10px;">بدء 🚀</button>
         </div>
     </div>
-<button onclick="window.location.href='index.html'" 
-        style="position: fixed; top: 20px; right: 80px; background: #e74c3c; color: white; border: none; padding: 10px 15px; border-radius: 50%; cursor: pointer; z-index: 1000; font-size: 18px;" 
-        title="خروج">🏠</button>
-
-<button class="theme-switch" onclick="toggleTheme()" id="themeBtn">🌙</button>
-    <button class="theme-switch" onclick="toggleTheme()" id="themeBtn">🌙</button>
-
+<div class="top-nav">
+    <button class="nav-btn home-btn" onclick="window.location.href='index.html'" title="الرئيسية">🏠</button>
+    <div class="nav-spacer"></div>
+    <button class="nav-btn theme-btn" onclick="toggleTheme()" id="themeBtn">🌙</button>
+</div>
     <div class="card">
         <div class="progress" id="progressInfo">جاري تحميل الكلمات...</div>
         <h2>اختبر معلوماتك</h2>
