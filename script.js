@@ -1,5 +1,5 @@
 // استبدل هذا الرابط برابط الـ Deployment الخاص بك من Google Apps Script
-const API_URL = "https://script.google.com/macros/s/AKfycbwVZ-WvCiUkR2np47AxnYk9FqIx56SCFzQ2xfjQv4RwMQ_-kGEWPR859m7cywLz5VAV/exec";
+const API_URL = "https://script.google.com/macros/s/AKfycbwEQlq4PQTlhPTJGfbl_l83dhDMPQLnqNF1zuVvFu4ourXe5T3kaw1iKHggkTri_Lta/exec";
 const currentUser = localStorage.getItem('app_user_id');
 
 async function loadData() {
