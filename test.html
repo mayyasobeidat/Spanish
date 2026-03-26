@@ -238,45 +238,46 @@
     }
        // --- دالة التحقق وتحديث السيرفر (Fetch) ---
     async function checkAnswer() {
-        const inputField = document.getElementById('userAnswer');
-        if (inputField.disabled || !inputField.value.trim()) return;
+    const inputField = document.getElementById('userAnswer');
+    if (inputField.disabled || !inputField.value.trim()) return;
 
-        const userAnswer = normalize(inputField.value);
-        const wordObj = myWords[currentIndex];
-        const storedMeaning = wordObj.ar;
-        
-        // التعامل مع المعاني المتعددة (الفاصلة، الخط المائل، إلخ)
-        const possibleMeanings = storedMeaning.split(/[/،,-]/).map(m => normalize(m.trim()));
-        
-        let isCorrect = possibleMeanings.some(m => m === userAnswer);
-        let isClose = !isCorrect && possibleMeanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAnswer) === 1);
-        
-        const resultDiv = document.getElementById('resultMsg');
-        inputField.disabled = true;
-        const finalCheck = (isCorrect || isClose);
+    const userAnswer = normalize(inputField.value);
+    const wordObj = myWords[currentIndex]; 
+    const storedMeaning = wordObj.ar;
+    const possibleMeanings = storedMeaning.split(/[/،,-]/).map(m => normalize(m.trim()));
+    
+    let isCorrect = possibleMeanings.some(m => m === userAnswer);
+    let isClose = !isCorrect && possibleMeanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAnswer) === 1);
+    
+    const resultDiv = document.getElementById('resultMsg');
+    inputField.disabled = true;
+    
+    const finalCheck = (isCorrect || isClose);
 
-        if (isCorrect) {
-            resultDiv.innerHTML = "<span style='color:green'>✅ صح! ممتاز.</span>";
-            if (!isReviewingSkipped) correctFirstTry++;
-        } else if (isClose) {
-            resultDiv.innerHTML = `<span style='color:#f39c12'>⚠️ قريبة! الإجابة: ${storedMeaning}</span>`;
-            if (!isReviewingSkipped) correctFirstTry++;
-        } else {
-            resultDiv.innerHTML = `<span style='color:red'>❌ خطأ. الإجابة: ${storedMeaning}</span>`;
-        }
-
-        // تحديث المستوى في جوجل شيت عبر الـ API
-        if (!isReviewingSkipped) {
-            totalTested++;
-            try {
-                const url = `${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${finalCheck}`;
-                fetch(url); // نرسلها في الخلفية ولا نحتاج لانتظار الرد لمتابعة الاختبار
-            } catch (e) { console.error("Update Level Error:", e); }
-        }
-
-        currentIndex++;
-        setTimeout(loadQuestion, 1200);
+    // 1. إظهار النتيجة للمستخدم فوراً
+    if (isCorrect) {
+        resultDiv.innerHTML = "<span style='color:green'>✅ صح! ممتاز.</span>";
+        if (!isReviewingSkipped) correctFirstTry++;
+    } else if (isClose) {
+        resultDiv.innerHTML = `<span style='color:#f39c12'>⚠️ قريبة! الإجابة: ${storedMeaning}</span>`;
+        if (!isReviewingSkipped) correctFirstTry++;
+    } else {
+        resultDiv.innerHTML = `<span style='color:red'>❌ خطأ. الإجابة: ${storedMeaning}</span>`;
     }
+
+    // 2. التعديل الجوهري: إرسال التحديث للسيرفر "في الخلفية"
+    if (!isReviewingSkipped) {
+        totalTested++;
+        // نرسل الطلب بدون await وبدون توقع رد (Fire and Forget)
+        const updateUrl = `${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${finalCheck}`;
+        fetch(updateUrl).catch(e => console.log("Background update failed, but it's okay."));
+    }
+
+    // 3. الانتقال السريع للكلمة التالية
+    currentIndex++;
+    // قللنا الوقت من 1200ms إلى 800ms ليكون الاختبار أسرع
+    setTimeout(loadQuestion, 800);
+}
 
     // (باقي الدوال: skipWord, showFinalResult, normalize, getLevenshteinDistance, toggleTheme تبقى كما هي)
     function skipWord() {
