@@ -118,230 +118,238 @@
     </div>
 
     <script>
-        const API_URL = "https://script.google.com/macros/s/AKfycbzJlL2gsxbBzqElRBBbS-mS3jLcY78gJmR-fLO8pWsBJ9Ef68S3HwlBmLeIHSxG-Q/exec";
-        let currentUser = localStorage.getItem('app_user_id');
-        let myWords = [], skippedWords = [], currentIndex = 0;
-        let isReviewingSkipped = false, correctFirstTry = 0, totalTested = 0;
-        let sessionCorrectCount = 0; 
+    // 1. الإعدادات الأساسية
+    const API_URL = "https://script.google.com/macros/s/AKfycbxum9zEdjo1_JESVPDirhcDlIU7YItUbzqHKaImDeYTXpXjUfEKKG6GJM9mFUuSio-Z/exec";
+    let currentUser = localStorage.getItem('app_user_id');
+    let myWords = [], skippedWords = [], currentIndex = 0;
+    let isReviewingSkipped = false, correctFirstTry = 0, totalTested = 0;
+    let sessionCorrectCount = 0; 
 
-        window.onload = function () {
-            // الثيم
-            if (localStorage.getItem('theme_list') === 'dark') {
-                document.body.classList.add('dark');
-                document.getElementById('themeBtn').innerText = "☀️";
-            }
-            if (!currentUser) { window.location.href = 'index.html'; } 
-            else { 
-                updateDailyStreak();
-                startLoading(); 
-            }
-        };
+    // 2. تشغيل التطبيق عند التحميل
+    window.onload = function () {
+        // تحميل الثيم (Dark/Light)
+        if (localStorage.getItem('theme_list') === 'dark') {
+            document.body.classList.add('dark');
+            if(document.getElementById('themeBtn')) document.getElementById('themeBtn').innerText = "☀️";
+        }
+        
+        // التحقق من تسجيل الدخول
+        if (!currentUser) { 
+            window.location.href = 'index.html'; 
+        } else { 
+            updateDailyStreak();
+            startLoading(); 
+        }
+    };
 
-        function updateDailyStreak() {
-            const today = new Date().toDateString();
-            let lastDate = localStorage.getItem('last_visit_date');
-            let streak = parseInt(localStorage.getItem('user_streak')) || 0;
-            let points = parseInt(localStorage.getItem('hint_points')) || 0;
+    // 3. نظام الستريك والنقاط
+    function updateDailyStreak() {
+        const today = new Date().toDateString();
+        let lastDate = localStorage.getItem('last_visit_date');
+        let streak = parseInt(localStorage.getItem('user_streak')) || 0;
+        let points = parseInt(localStorage.getItem('hint_points')) || 0;
 
-            if (lastDate && lastDate !== today) {
-                const diff = Math.floor((new Date(today) - new Date(lastDate)) / 86400000);
-                if (diff === 1) streak++; 
-                else if (diff > 1) streak = 1;
-                localStorage.setItem('user_streak', streak);
-            } else if (!lastDate) {
-                streak = 1;
-                localStorage.setItem('user_streak', streak);
-            }
-
-            localStorage.setItem('last_visit_date', today);
-            document.getElementById('dailyStreak').innerText = `🔥 ${streak}`;
-            document.getElementById('hintPointsDisplay').innerText = `💡 ${points}`;
+        if (lastDate && lastDate !== today) {
+            const diff = Math.floor((new Date(today) - new Date(lastDate)) / 86400000);
+            if (diff === 1) streak++; 
+            else if (diff > 1) streak = 1;
+            localStorage.setItem('user_streak', streak);
+        } else if (!lastDate) {
+            streak = 1;
+            localStorage.setItem('user_streak', streak);
         }
 
-        async function startLoading() {
-            const localCache = localStorage.getItem(`cache_${currentUser}`);
-            if (localCache) {
-                myWords = JSON.parse(localCache).sort(() => Math.random() - 0.5);
-                loadQuestion();
-            }
-            try {
-                const response = await fetch(`${API_URL}?action=getWords&user=${currentUser}`);
-                const freshWords = await response.json();
-                if (freshWords && freshWords.length > 0) {
-                    localStorage.setItem(`cache_${currentUser}`, JSON.stringify(freshWords));
-                    if (!localCache) { myWords = freshWords.sort(() => Math.random() - 0.5); loadQuestion(); }
+        localStorage.setItem('last_visit_date', today);
+        if(document.getElementById('dailyStreak')) document.getElementById('dailyStreak').innerText = `🔥 ${streak}`;
+        if(document.getElementById('hintPointsDisplay')) document.getElementById('hintPointsDisplay').innerText = `💡 ${points}`;
+    }
+
+    // 4. جلب الكلمات (سحابة + كاش محلي)
+    async function startLoading() {
+        const localCache = localStorage.getItem(`cache_${currentUser}`);
+        if (localCache) {
+            myWords = JSON.parse(localCache).sort(() => Math.random() - 0.5);
+            loadQuestion();
+        }
+        try {
+            const response = await fetch(`${API_URL}?action=getWords&user=${currentUser}`);
+            const freshWords = await response.json();
+            if (freshWords && freshWords.length > 0) {
+                localStorage.setItem(`cache_${currentUser}`, JSON.stringify(freshWords));
+                if (!localCache) { 
+                    myWords = freshWords.sort(() => Math.random() - 0.5); 
+                    loadQuestion(); 
                 }
-            } catch (e) { console.error("Sync Error"); }
-        }
-
-        function loadQuestion() {
-            if (currentIndex >= myWords.length) {
-                if (skippedWords.length > 0) {
-                    document.getElementById('resultMsg').innerHTML = "<span style='color:var(--warning)'>جاري مراجعة الكلمات المتخطاة...</span>";
-                    setTimeout(() => { 
-                        myWords = [...skippedWords]; skippedWords = []; 
-                        currentIndex = 0; isReviewingSkipped = true; loadQuestion(); 
-                    }, 1200);
-                } else { showFinalResult(); }
-                return;
             }
-            
-            const wordObj = myWords[currentIndex];
-            document.getElementById('progressInfo').innerText = `كلمة ${currentIndex + 1} من ${myWords.length}`;
-            document.getElementById('questionWord').innerText = wordObj.sp;
-            
-            const input = document.getElementById('userAnswer');
-            input.value = ""; input.disabled = false; input.focus();
-            document.getElementById('resultMsg').innerText = "";
-            speakSpanish(wordObj.sp);
+        } catch (e) { 
+            console.error("Sync Error with Google Sheets"); 
         }
-
-
-
-function checkAnswer() {
-    const input = document.getElementById('userAnswer');
-    if (input.disabled || !input.value.trim()) return;
-
-    const userAns = normalize(input.value);
-    const wordObj = myWords[currentIndex];
-    const meanings = wordObj.ar.split(/[/،,-]/).map(m => normalize(m.trim()));
-    
-    const isCorrect = meanings.some(m => m === userAns);
-    const isClose = !isCorrect && meanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAns) === 1);
-    
-    // --- الجزء الجديد: تحديث قائمة "كلمات بحاجة لدراسة" ---
-    const finalResult = (isCorrect || isClose);
-    updateStudyList(wordObj, finalResult); 
-    // --------------------------------------------------
-
-    input.disabled = true;
-    const resDiv = document.getElementById('resultMsg');
-
-    if (isCorrect) {
-        resDiv.innerHTML = "<span style='color:var(--success)'>✅ صح ممتاز!</span>";
-        sessionCorrectCount++;
-        if (sessionCorrectCount % 5 === 0) {
-            let p = (parseInt(localStorage.getItem('hint_points')) || 0) + 1;
-            localStorage.setItem('hint_points', p);
-            document.getElementById('hintPointsDisplay').innerText = `💡 ${p}`;
-        }
-    } else if (isClose) {
-        resDiv.innerHTML = `<span style='color:var(--warning)'>⚠️ قريبة جداً! (${wordObj.ar})</span>`;
-    } else {
-        resDiv.innerHTML = `<span style='color:var(--danger)'>❌ خطأ، الإجابة: ${wordObj.ar}</span>`;
     }
 
-    if (!isReviewingSkipped) {
-        totalTested++;
-        if (finalResult) correctFirstTry++;
-        fetch(`${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${finalResult}`);
-    }
-
-    currentIndex++;
-    setTimeout(loadQuestion, 1100);
-}
-
-// لا تنسَ إضافة هذه الدالة في أسفل ملف الـ script الخاص بك
-function updateStudyList(wordObj, isCorrect) {
-    let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
-
-    if (!isCorrect) {
-        // إذا جاوب غلط وما كانت موجودة بالقائمة.. ضيفها
-        const exists = studyList.some(w => w.sp === wordObj.sp);
-        if (!exists) {
-            studyList.push(wordObj);
+    // 5. تحميل السؤال الحالي
+    function loadQuestion() {
+        if (currentIndex >= myWords.length) {
+            if (skippedWords.length > 0) {
+                document.getElementById('resultMsg').innerHTML = "<span style='color:var(--warning)'>جاري مراجعة الكلمات المتخطاة...</span>";
+                setTimeout(() => { 
+                    myWords = [...skippedWords]; 
+                    skippedWords = []; 
+                    currentIndex = 0; 
+                    isReviewingSkipped = true; 
+                    loadQuestion(); 
+                }, 1200);
+            } else { 
+                showFinalResult(); 
+            }
+            return;
         }
-    } else {
-        // إذا جاوب صح.. احذفها من قائمة الدراسة (لأن المستخدم أتقنها)
-        studyList = studyList.filter(w => w.sp !== wordObj.sp);
+        
+        const wordObj = myWords[currentIndex];
+        document.getElementById('progressInfo').innerText = `كلمة ${currentIndex + 1} من ${myWords.length}`;
+        document.getElementById('questionWord').innerText = wordObj.sp;
+        
+        const input = document.getElementById('userAnswer');
+        input.value = ""; 
+        input.disabled = false; 
+        input.focus();
+        document.getElementById('resultMsg').innerText = "";
+        speakSpanish(wordObj.sp);
     }
 
-    localStorage.setItem('needs_study', JSON.stringify(studyList));
-}
-        function useHint() {
-            let p = parseInt(localStorage.getItem('hint_points')) || 0;
-            const resDiv = document.getElementById('resultMsg');
-            if (p > 0) {
-                p--;
+    // 6. التحقق من الإجابة والمزامنة
+    function checkAnswer() {
+        const input = document.getElementById('userAnswer');
+        if (input.disabled || !input.value.trim()) return;
+
+        const userAns = normalize(input.value);
+        const wordObj = myWords[currentIndex];
+        const meanings = wordObj.ar.split(/[/،,-]/).map(m => normalize(m.trim()));
+        
+        const isCorrect = meanings.some(m => m === userAns);
+        const isClose = !isCorrect && meanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAns) === 1);
+        
+        const finalResult = (isCorrect || isClose);
+
+        // تحديث قائمة الدراسة (محلي + سحابي)
+        updateStudyList(wordObj, finalResult); 
+
+        input.disabled = true;
+        const resDiv = document.getElementById('resultMsg');
+
+        if (isCorrect) {
+            resDiv.innerHTML = "<span style='color:var(--success)'>✅ صح ممتاز!</span>";
+            sessionCorrectCount++;
+            if (sessionCorrectCount % 5 === 0) {
+                let p = (parseInt(localStorage.getItem('hint_points')) || 0) + 1;
                 localStorage.setItem('hint_points', p);
                 document.getElementById('hintPointsDisplay').innerText = `💡 ${p}`;
-                const wordAr = myWords[currentIndex].ar.trim();
-                resDiv.innerHTML = `<span style="color:var(--purple)">تلميح: تبدأ بـ (${wordAr.substring(0,2)}...)</span>`;
-            } else {
-                resDiv.innerHTML = "<span style='color:var(--danger)'>لا تملك نقاط تلميح! 💡</span>";
             }
+        } else if (isClose) {
+            resDiv.innerHTML = `<span style='color:var(--warning)'>⚠️ قريبة جداً! (${wordObj.ar})</span>`;
+        } else {
+            resDiv.innerHTML = `<span style='color:var(--danger)'>❌ خطأ، الإجابة: ${wordObj.ar}</span>`;
         }
 
-        function skipWord() {
-            if (document.getElementById('userAnswer').disabled) return;
-            skippedWords.push(myWords[currentIndex]);
-            document.getElementById('resultMsg').innerHTML = "⏭️ تم التخطي لمراجعته لاحقاً";
-            document.getElementById('userAnswer').disabled = true;
-            currentIndex++;
-            setTimeout(loadQuestion, 800);
+        if (!isReviewingSkipped) {
+            totalTested++;
+            if (finalResult) correctFirstTry++;
+            // تحديث مستوى الكلمة الأصلي في الشيت
+            fetch(`${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${finalResult}`);
         }
 
-        function speakSpanish(text) {
-            window.speechSynthesis.cancel();
-            const u = new SpeechSynthesisUtterance(text);
-            u.lang = 'es-ES'; u.rate = 0.85;
-            window.speechSynthesis.speak(u);
-        }
+        currentIndex++;
+        setTimeout(loadQuestion, 1100);
+    }
 
-        function showFinalResult() {
-            const p = totalTested > 0 ? ((correctFirstTry / totalTested) * 100).toFixed(1) : 0;
-            document.getElementById('modalPercent').innerText = p + "%";
-            document.getElementById('modalBody').innerHTML = `الإجابات الصحيحة: <b>${correctFirstTry}</b><br>المحاولات الكلية: <b>${totalTested}</b>`;
-            document.getElementById('resultModal').style.display = "flex";
-        }
+    // 7. الدالة الجوهرية: مزامنة قائمة "بحاجة لدراسة"
+    async function updateStudyList(wordObj, isCorrect) {
+        let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
 
-        function normalize(t) {
-            if(!t) return "";
-            return t.trim().replace(/[\u064B-\u0652]/g, "").replace(/[اًأإآ]/g, "ا").replace(/ة/g, "ه").replace(/[يى]/g, "ى").replace(/\s+/g, "").toLowerCase();
-        }
-
-        function getLevenshteinDistance(a, b) {
-            const m = Array.from({ length: a.length + 1 }, (_, i) => [i]);
-            for (let j = 0; j <= b.length; j++) m[0][j] = j;
-            for (let i = 1; i <= a.length; i++) {
-                for (let j = 1; j <= b.length; j++) {
-                    const cost = a[i - 1] === b[j - 1] ? 0 : 1;
-                    m[i][j] = Math.min(m[i-1][j]+1, m[i][j-1]+1, m[i-1][j-1]+cost);
-                }
-            }
-            return m[a.length][b.length];
-        }
-
-        function toggleTheme() {
-            const d = document.body.classList.toggle('dark');
-            document.getElementById('themeBtn').innerText = d ? "☀️" : "🌙";
-            localStorage.setItem('theme_list', d ? 'dark' : 'light');
-        }
-
-       async function updateStudyList(wordObj, isCorrect) {
-    let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
-
-    if (!isCorrect) {
-        const exists = studyList.some(w => w.sp === wordObj.sp);
-        if (!exists) {
-            studyList.push(wordObj);
+        if (isCorrect) {
+            // حذف من المحلي
+            studyList = studyList.filter(w => w.sp.toLowerCase() !== wordObj.sp.toLowerCase());
             localStorage.setItem('needs_study', JSON.stringify(studyList));
 
-            // --- المزامنة مع الشيت في الخلفية ---
-            const syncUrl = `${API_URL}?action=saveStudy&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&ar=${encodeURIComponent(wordObj.ar)}`;
+            // حذف من الشيت (عشان ما ترجع عند المزامنة من جهاز آخر)
+            const deleteUrl = `${API_URL}?action=deleteStudyWord&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}`;
+            fetch(deleteUrl).then(() => console.log("Cloud Delete ✅"));
             
-            fetch(syncUrl)
-                .then(() => console.log("Synced with Cloud ✅"))
-                .catch(e => console.log("Cloud sync failed, kept locally 💾"));
+        } else {
+            // إضافة للمحلي لو مش موجودة
+            const exists = studyList.some(w => w.sp.toLowerCase() === wordObj.sp.toLowerCase());
+            if (!exists) {
+                studyList.push(wordObj);
+                localStorage.setItem('needs_study', JSON.stringify(studyList));
+
+                // إضافة للشيت
+                const saveUrl = `${API_URL}?action=saveStudy&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&ar=${encodeURIComponent(wordObj.ar)}`;
+                fetch(saveUrl).then(() => console.log("Cloud Save ✅"));
+            }
         }
-    } else {
-        // إذا جاوب صح بنشيلها من المحلي
-        studyList = studyList.filter(w => w.sp !== wordObj.sp);
-        localStorage.setItem('needs_study', JSON.stringify(studyList));
-        
-        // ملاحظة: ممكن مستقبلاً نضيف action لحذفها من الشيت أيضاً لو حبيت
     }
-}
-    </script>
+
+    // 8. وظائف إضافية (تلميح، تخطي، نطق)
+    function useHint() {
+        let p = parseInt(localStorage.getItem('hint_points')) || 0;
+        const resDiv = document.getElementById('resultMsg');
+        if (p > 0) {
+            p--;
+            localStorage.setItem('hint_points', p);
+            document.getElementById('hintPointsDisplay').innerText = `💡 ${p}`;
+            const wordAr = myWords[currentIndex].ar.trim();
+            resDiv.innerHTML = `<span style="color:var(--purple)">تلميح: تبدأ بـ (${wordAr.substring(0,2)}...)</span>`;
+        } else {
+            resDiv.innerHTML = "<span style='color:var(--danger)'>لا تملك نقاط تلميح! 💡</span>";
+        }
+    }
+
+    function skipWord() {
+        if (document.getElementById('userAnswer').disabled) return;
+        skippedWords.push(myWords[currentIndex]);
+        document.getElementById('resultMsg').innerHTML = "⏭️ تم التخطي لمراجعته لاحقاً";
+        document.getElementById('userAnswer').disabled = true;
+        currentIndex++;
+        setTimeout(loadQuestion, 800);
+    }
+
+    function speakSpanish(text) {
+        window.speechSynthesis.cancel();
+        const u = new SpeechSynthesisUtterance(text);
+        u.lang = 'es-ES'; 
+        u.rate = 0.85;
+        window.speechSynthesis.speak(u);
+    }
+
+    // 9. الدوال المساعدة (نورماليز و ليفنشتاين)
+    function normalize(t) {
+        if(!t) return "";
+        return t.trim().replace(/[\u064B-\u0652]/g, "").replace(/[اًأإآ]/g, "ا").replace(/ة/g, "ه").replace(/[يى]/g, "ى").replace(/\s+/g, "").toLowerCase();
+    }
+
+    function getLevenshteinDistance(a, b) {
+        const m = Array.from({ length: a.length + 1 }, (_, i) => [i]);
+        for (let j = 0; j <= b.length; j++) m[0][j] = j;
+        for (let i = 1; i <= a.length; i++) {
+            for (let j = 1; j <= b.length; j++) {
+                const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+                m[i][j] = Math.min(m[i-1][j]+1, m[i][j-1]+1, m[i-1][j-1]+cost);
+            }
+        }
+        return m[a.length][b.length];
+    }
+
+    function showFinalResult() {
+        const p = totalTested > 0 ? ((correctFirstTry / totalTested) * 100).toFixed(1) : 0;
+        document.getElementById('modalPercent').innerText = p + "%";
+        document.getElementById('modalBody').innerHTML = `الإجابات الصحيحة: <b>${correctFirstTry}</b><br>المحاولات الكلية: <b>${totalTested}</b>`;
+        document.getElementById('resultModal').style.display = "flex";
+    }
+
+    function toggleTheme() {
+        const d = document.body.classList.toggle('dark');
+        if(document.getElementById('themeBtn')) document.getElementById('themeBtn').innerText = d ? "☀️" : "🌙";
+        localStorage.setItem('theme_list', d ? 'dark' : 'light');
+    }
+</script>
 </body>
 </html>
