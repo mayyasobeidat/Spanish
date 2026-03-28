@@ -288,6 +288,8 @@ body.dark .btn-study {
   let currentUser = localStorage.getItem('app_user_id');
 
  window.onload = function() {
+    const currentUser = localStorage.getItem('app_user_id');
+    
     // 1. معالجة الثيم (Dark/Light)
     if (localStorage.getItem('theme_list') === 'dark') {
         document.body.classList.add('dark');
@@ -295,40 +297,62 @@ body.dark .btn-study {
         if (themeBtn) themeBtn.innerText = "☀️";
     }
 
-    // 2. التحقق من المستخدم وتحديث الواجهة
+    // 2. التحقق من المستخدم
     if (!currentUser) {
         const loginOverlay = document.getElementById('loginOverlay');
         if (loginOverlay) loginOverlay.style.display = 'flex';
     } else {
-        // استدعاء دالة التحديث
+        // تحديث الواجهة فوراً بناءً على الكاش القديم (عشان السرعة)
         updateUIForUser();
+        // ثم عمل المزامنة في الخلفية لتحديث البيانات من الشيت
+        syncStudyListSilent(currentUser);
     }
 };
-
-// الدالة المسؤولة عن عرض بيانات المستخدم والستريك
+async function syncStudyListSilent(user) {
+    try {
+        const response = await fetch(`${API_URL}?action=getStudyWords&user=${user}`);
+        const cloudWords = await response.json();
+        
+        if (Array.isArray(cloudWords)) {
+            // تحديث الذاكرة المحلية بما هو موجود في الشيت فعلياً
+            localStorage.setItem('needs_study', JSON.stringify(cloudWords));
+            
+            // إعادة تحديث الواجهة والزر بناءً على البيانات الجديدة
+            updateUIForUser();
+            console.log("Background Sync Done: Cloud words updated.");
+        }
+    } catch (e) {
+        console.log("Silent sync failed, using local data.");
+    }
+}
 function updateUIForUser() {
-  if (currentUser) {
-    document.getElementById('userStatus').style.display = 'flex';
-    document.getElementById('currentDisplayName').innerText = currentUser.toUpperCase();
-    
-    // 1. تحديث الستريك
-    const streak = localStorage.getItem('user_streak') || 0;
-    const streakEl = document.getElementById('dailyStreak');
-    if (streakEl) streakEl.innerText = `🔥 ${streak}`;
-    
-    // 2. تحديث زر الكلمات الصعبة (Study Button)
-    const studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
-    const studyBtn = document.getElementById('studyBtn');
-    
-    if (studyBtn) {
-        if (studyList.length > 0) {
-            studyBtn.style.display = 'block';
-            studyBtn.innerText = `📚 مراجعة ${studyList.length} كلمات صعبة`;
-        } else {
-            studyBtn.style.display = 'none'; // لا يظهر إذا كانت القائمة فارغة
+    const user = localStorage.getItem('app_user_id');
+    if (user) {
+        const userStatus = document.getElementById('userStatus');
+        if (userStatus) userStatus.style.display = 'flex';
+        
+        const nameDisplay = document.getElementById('currentDisplayName');
+        if (nameDisplay) nameDisplay.innerText = user.toUpperCase();
+        
+        // تحديث الستريك
+        const streak = localStorage.getItem('user_streak') || 0;
+        const streakEl = document.getElementById('dailyStreak');
+        if (streakEl) streakEl.innerText = `🔥 ${streak}`;
+        
+        // تحديث الزر بناءً على البيانات (المحلية أو المحدثة من السحاب)
+        const studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
+        const studyBtn = document.getElementById('studyBtn');
+        
+        if (studyBtn) {
+            if (studyList.length > 0) {
+                studyBtn.style.display = 'block';
+                // تحديث نص الزر ليشمل العدد الفعلي
+                studyBtn.innerText = `📚 مراجعة ${studyList.length} كلمات صعبة`;
+            } else {
+                studyBtn.style.display = 'none';
+            }
         }
     }
-  }
 }
   function login() {
     const name = document.getElementById('userNameInput').value.trim().toLowerCase();
