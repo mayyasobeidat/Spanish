@@ -196,44 +196,72 @@
             speakSpanish(wordObj.sp);
         }
 
-        function checkAnswer() {
-            const input = document.getElementById('userAnswer');
-            if (input.disabled || !input.value.trim()) return;
+       عشان ندمج الميزة الجديدة (تصنيف الكلمات الصعبة) في الكود الحالي، رح نضيف استدعاء دالة التحديث فور معرفة النتيجة.
 
-            const userAns = normalize(input.value);
-            const wordObj = myWords[currentIndex];
-            const meanings = wordObj.ar.split(/[/،,-]/).map(m => normalize(m.trim()));
-            
-            const isCorrect = meanings.some(m => m === userAns);
-            const isClose = !isCorrect && meanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAns) === 1);
-            
-            input.disabled = true;
-            const resDiv = document.getElementById('resultMsg');
+إليك الكود المحدث بالكامل (انسخه واستبدل الدالة القديمة به):
 
-            if (isCorrect) {
-                resDiv.innerHTML = "<span style='color:var(--success)'>✅ صح ممتاز!</span>";
-                sessionCorrectCount++;
-                if (sessionCorrectCount % 5 === 0) {
-                    let p = (parseInt(localStorage.getItem('hint_points')) || 0) + 1;
-                    localStorage.setItem('hint_points', p);
-                    document.getElementById('hintPointsDisplay').innerText = `💡 ${p}`;
-                }
-            } else if (isClose) {
-                resDiv.innerHTML = `<span style='color:var(--warning)'>⚠️ قريبة جداً! (${wordObj.ar})</span>`;
-            } else {
-                resDiv.innerHTML = `<span style='color:var(--danger)'>❌ خطأ، الإجابة: ${wordObj.ar}</span>`;
-            }
+JavaScript
 
-            if (!isReviewingSkipped) {
-                totalTested++;
-                if (isCorrect || isClose) correctFirstTry++;
-                fetch(`${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${isCorrect || isClose}`);
-            }
+function checkAnswer() {
+    const input = document.getElementById('userAnswer');
+    if (input.disabled || !input.value.trim()) return;
 
-            currentIndex++;
-            setTimeout(loadQuestion, 1100);
+    const userAns = normalize(input.value);
+    const wordObj = myWords[currentIndex];
+    const meanings = wordObj.ar.split(/[/،,-]/).map(m => normalize(m.trim()));
+    
+    const isCorrect = meanings.some(m => m === userAns);
+    const isClose = !isCorrect && meanings.some(m => m.length > 3 && getLevenshteinDistance(m, userAns) === 1);
+    
+    // --- الجزء الجديد: تحديث قائمة "كلمات بحاجة لدراسة" ---
+    const finalResult = (isCorrect || isClose);
+    updateStudyList(wordObj, finalResult); 
+    // --------------------------------------------------
+
+    input.disabled = true;
+    const resDiv = document.getElementById('resultMsg');
+
+    if (isCorrect) {
+        resDiv.innerHTML = "<span style='color:var(--success)'>✅ صح ممتاز!</span>";
+        sessionCorrectCount++;
+        if (sessionCorrectCount % 5 === 0) {
+            let p = (parseInt(localStorage.getItem('hint_points')) || 0) + 1;
+            localStorage.setItem('hint_points', p);
+            document.getElementById('hintPointsDisplay').innerText = `💡 ${p}`;
         }
+    } else if (isClose) {
+        resDiv.innerHTML = `<span style='color:var(--warning)'>⚠️ قريبة جداً! (${wordObj.ar})</span>`;
+    } else {
+        resDiv.innerHTML = `<span style='color:var(--danger)'>❌ خطأ، الإجابة: ${wordObj.ar}</span>`;
+    }
 
+    if (!isReviewingSkipped) {
+        totalTested++;
+        if (finalResult) correctFirstTry++;
+        fetch(`${API_URL}?action=updateLevel&user=${currentUser}&sp=${encodeURIComponent(wordObj.sp)}&isCorrect=${finalResult}`);
+    }
+
+    currentIndex++;
+    setTimeout(loadQuestion, 1100);
+}
+
+// لا تنسَ إضافة هذه الدالة في أسفل ملف الـ script الخاص بك
+function updateStudyList(wordObj, isCorrect) {
+    let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
+
+    if (!isCorrect) {
+        // إذا جاوب غلط وما كانت موجودة بالقائمة.. ضيفها
+        const exists = studyList.some(w => w.sp === wordObj.sp);
+        if (!exists) {
+            studyList.push(wordObj);
+        }
+    } else {
+        // إذا جاوب صح.. احذفها من قائمة الدراسة (لأن المستخدم أتقنها)
+        studyList = studyList.filter(w => w.sp !== wordObj.sp);
+    }
+
+    localStorage.setItem('needs_study', JSON.stringify(studyList));
+}
         function useHint() {
             let p = parseInt(localStorage.getItem('hint_points')) || 0;
             const resDiv = document.getElementById('resultMsg');
@@ -293,6 +321,23 @@
             document.getElementById('themeBtn').innerText = d ? "☀️" : "🌙";
             localStorage.setItem('theme_list', d ? 'dark' : 'light');
         }
+
+        function updateStudyList(wordObj, isCorrect) {
+    let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
+
+    if (!isCorrect) {
+        // إذا جاوب غلط وما كانت موجودة بالقائمة.. ضيفها
+        const exists = studyList.some(w => w.sp === wordObj.sp);
+        if (!exists) {
+            studyList.push(wordObj);
+        }
+    } else {
+        // إذا جاوب صح.. احذفها من قائمة الدراسة
+        studyList = studyList.filter(w => w.sp !== wordObj.sp);
+    }
+
+    localStorage.setItem('needs_study', JSON.stringify(studyList));
+}
     </script>
 </body>
 </html>
