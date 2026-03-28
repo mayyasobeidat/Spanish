@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+  <link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <meta charset="UTF-8">
+  <title>Spanish Words App</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="application-name" content="Yaas Spanish">
+<meta name="apple-mobile-web-app-title" content="Yaas Spanish">
+<meta name="theme-color" content="#1a1a2e"> <meta name="msapplication-navbutton-color" content="#1a1a2e">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="display" content="standalone">
+
+<meta name="theme-color" content="#1a1a2e"> 
+
+<link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/3898/3898082.png">
+<link rel="icon" sizes="192x192" href="https://cdn-icons-png.flaticon.com/512/3898/3898082.png">
+<link rel="icon" type="image/png" href="https://img.icons8.com/fluency/512/spanish-language.png">
+<link rel="apple-touch-icon" href="https://img.icons8.com/fluency/512/spanish-language.png">
+  <base target="_top">
+  
+</head>
+<body>
+
+<div id="studyContainer">
+    <h2>📚 كلمات للمراجعة المكثفة</h2>
+    <div id="wordsList"></div>
+</div>
+
+<script>
+    function displayNeedsStudy() {
+        const studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
+        const container = document.getElementById('wordsList');
+        
+        if (studyList.length === 0) {
+            container.innerHTML = "<p>ممتاز! لا يوجد كلمات صعبة حالياً. ✅</p>";
+            return;
+        }
+
+        container.innerHTML = studyList.map(w => `
+            <div class="word-card">
+                <span><b>${w.sp}</b>: ${w.ar}</span>
+                <button onclick="removeFromStudy('${w.sp}')">تم الحفظ ✅</button>
+            </div>
+        `).join('');
+    }
+    
+    function removeFromStudy(spWord) {
+        let studyList = JSON.parse(localStorage.getItem('needs_study'));
+        studyList = studyList.filter(w => w.sp !== spWord);
+        localStorage.setItem('needs_study', JSON.stringify(studyList));
+        displayNeedsStudy(); // إعادة التحديث
+    }
+
+    window.onload = displayNeedsStudy;
+</script>
+</body>
+</html>
