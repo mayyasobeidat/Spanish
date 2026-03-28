@@ -89,7 +89,7 @@ JavaScript
 async function loadStudyWords() {
     const grid = document.getElementById('wordsGrid');
     const currentUser = localStorage.getItem('app_user_id');
-    const API_URL = "https://script.google.com/macros/s/AKfycbzJlL2gsxbBzqElRBBbS-mS3jLcY78gJmR-fLO8pWsBJ9Ef68S3HwlBmLeIHSxG-Q/exec";
+    const API_URL = "https://script.google.com/macros/s/AKfycbxum9zEdjo1_JESVPDirhcDlIU7YItUbzqHKaImDeYTXpXjUfEKKG6GJM9mFUuSio-Z/exec";
     
     if (!currentUser) {
         grid.innerHTML = "<p style='text-align:center;'>⚠️ يرجى تسجيل الدخول أولاً.</p>";
@@ -159,13 +159,24 @@ async function loadStudyWords() {
     }
 
     // 4. دالة الحذف (أضفناها لضمان عمل زر X)
-    function removeItem(sp) {
-        let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
-        studyList = studyList.filter(w => w.sp.toLowerCase() !== sp.toLowerCase());
-        localStorage.setItem('needs_study', JSON.stringify(studyList));
-        displayWords(studyList);
-        // ملاحظة: الحذف هنا محلي، يمكنك إضافة fetch لحذفه من الشيت أيضاً لاحقاً
+ async function removeItem(sp) {
+    // 1. حذف محلي فوراً
+    let studyList = JSON.parse(localStorage.getItem('needs_study')) || [];
+    studyList = studyList.filter(w => w.sp.toLowerCase() !== sp.toLowerCase());
+    localStorage.setItem('needs_study', JSON.stringify(studyList));
+    displayWords(studyList);
+
+    // 2. طلب حذف من الشيت في الخلفية
+    const currentUser = localStorage.getItem('app_user_id');
+    const API_URL = "رابط_الـ_API_الخاص_بك";
+    
+    try {
+        await fetch(`${API_URL}?action=deleteStudyWord&user=${currentUser}&sp=${encodeURIComponent(sp)}`);
+        console.log("Cloud delete complete");
+    } catch (e) {
+        console.error("Cloud delete failed");
     }
+}
 
     window.onload = loadStudyWords;
 </script>
